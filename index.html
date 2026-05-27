@@ -1,0 +1,2975 @@
+<!DOCTYPE html>
+<!-- saved from url=(0054)file:///C:/Users/leewe/Downloads/wei_finance_v2_5.html -->
+<html lang="zh-Hant"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0e0c">
+<title>Wei · 財務儀表板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="./Wei · 財務儀表板_files/css2" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f0e0c;
+  --bg-card:#1a1812;
+  --bg-elev:#221f18;
+  --line:#332f26;
+  --line-soft:#2a261f;
+
+  /* 文字對比拉高 */
+  --ink:#f5efe2;          /* 主文字：高亮 */
+  --ink-soft:#d4ccbd;     /* 次要文字：仍清楚 (原本是 #a9a195) */
+  --ink-mute:#9a9080;     /* 弱文字 (原本是 #6e685d，太暗) */
+  --ink-faint:#6e6759;    /* 只用於時間戳這類真的不重要的 */
+
+  --accent:#e4b888;       /* 金棕主色，稍微提亮 */
+  --accent-dim:#a8845a;
+  --pos:#9ec5a0;          /* 綠色提亮 */
+  --neg:#e08679;          /* 紅色提亮 */
+  --warn:#5fc7d4;         /* 警示：青藍綠，跟暖色主色形成對比 */
+  --warn-glow:rgba(95,199,212,0.20);
+  --warn-glow-soft:rgba(95,199,212,0.06);
+
+  --serif:'Fraunces','Noto Serif TC',serif;
+  --sans:'Noto Sans TC',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-weight:400;line-height:1.6;min-height:100vh;}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer;}
+input,select{font-family:inherit;color:var(--ink);background:none;border:none;outline:none;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+
+/* ============ Layout ============ */
+.app{max-width:1280px;margin:0 auto;padding:16px 20px 60px;}
+html,body{overflow-x:hidden;}
+@media(min-width:768px){.app{padding:24px 36px 40px;}}
+
+/* ============ Header ============ */
+.header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px;}
+.brand{font-family:var(--serif);font-weight:400;font-size:22px;letter-spacing:-0.02em;color:var(--ink);}
+.brand em{font-style:italic;color:var(--accent);font-weight:500;}
+.date-pill{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:0.1em;text-transform:uppercase;font-weight:500;}
+
+/* ============ Tabs ============ */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{padding:11px 12px;font-size:13px;color:var(--ink-soft);letter-spacing:0.03em;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;font-weight:500;}
+.tab:hover{color:var(--ink);}
+.tab.active{color:var(--ink);border-bottom-color:var(--accent);font-weight:600;}
+.tab.edit{margin-left:auto;color:var(--accent);}
+.tab.edit.active{color:var(--accent);}
+.tab-content{display:none;animation:fadeIn .3s ease;}
+.tab-content.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* ============ Sub-tabs (for edit page) ============ */
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;padding:5px;background:var(--bg-card);border:1px solid var(--line);border-radius:6px;}
+.subtab{padding:8px 14px;font-size:13px;color:var(--ink-soft);border-radius:4px;transition:all .15s;font-weight:500;}
+.subtab:hover{color:var(--ink);background:var(--bg-elev);}
+.subtab.active{color:var(--bg);background:var(--accent);font-weight:600;}
+.subtab-content{display:none;}
+.subtab-content.active{display:block;}
+
+/* ============ Dashboard grid (one-screen layout) ============ */
+.dash-grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;
+  grid-template-columns:1fr;
+}
+@media(min-width:768px){
+  .dash-grid{
+    grid-template-columns:1.6fr 1fr 1fr;
+    grid-template-rows:auto auto;
+    grid-template-areas:
+      "primary movable total"
+      "primary fixed   cc";
+  }
+  .dash-primary{grid-area:primary;}
+}
+.hero-cell{background:var(--bg-card);padding:20px 22px;}
+.dash-primary{padding:28px 26px;background:linear-gradient(135deg,#1a1812 0%,#221f18 100%);position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;gap:18px;}
+.dash-primary::before{content:'';position:absolute;top:-50%;right:-20%;width:300px;height:300px;background:radial-gradient(circle,rgba(228,184,136,0.12) 0%,transparent 70%);pointer-events:none;}
+.dash-primary > *{position:relative;}
+.dash-cell{display:flex;flex-direction:column;justify-content:center;min-height:0;}
+
+.dash-formula{font-family:var(--mono);font-size:11px;color:var(--ink-soft);line-height:1.7;font-weight:500;padding-top:14px;border-top:1px solid var(--line);margin-top:4px;}
+
+.hero-label{font-family:var(--mono);font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:10px;font-weight:500;}
+.hero-value{font-family:var(--serif);font-weight:400;font-size:34px;letter-spacing:-0.03em;line-height:1.05;color:var(--ink);}
+.hero-value.huge{font-size:56px;font-weight:400;}
+.hero-value.mid{font-size:26px;}
+.hero-value .currency{font-size:0.4em;color:var(--ink-soft);margin-right:8px;font-family:var(--sans);font-weight:500;letter-spacing:0;}
+.hero-value.positive{color:var(--pos);}
+.hero-value.negative{color:var(--neg);}
+.hero-sub{margin-top:8px;font-size:12px;color:var(--ink-soft);font-family:var(--mono);font-weight:500;}
+.countdown{margin-top:12px;display:flex;align-items:baseline;gap:8px;}
+.countdown-num{font-family:var(--serif);font-size:32px;font-weight:500;font-style:italic;color:var(--accent);}
+.countdown-txt{font-size:13px;color:var(--ink-soft);font-weight:500;}
+
+/* progress bar */
+.progress{margin-top:14px;height:3px;background:var(--line);position:relative;overflow:hidden;border-radius:2px;}
+.progress-fill{position:absolute;left:0;top:0;height:100%;background:var(--accent);transition:width .6s cubic-bezier(.4,0,.2,1);}
+
+/* ============ Two-column layout for view pages ============ */
+.two-col{display:grid;grid-template-columns:1fr;gap:24px;}
+@media(min-width:900px){.two-col{grid-template-columns:1fr 1fr;gap:32px;}}
+
+/* ============ Section ============ */
+.section{margin-bottom:24px;}
+.section:last-child{margin-bottom:0;}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+.section-title{font-family:var(--serif);font-size:20px;font-weight:500;letter-spacing:-0.01em;color:var(--ink);}
+.section-title .num{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-left:8px;font-weight:500;letter-spacing:0.1em;vertical-align:2px;}
+.section-total{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:600;}
+
+/* ============ Item Row (view mode) ============ */
+.row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-soft);}
+.row.editable{grid-template-columns:1fr auto auto;}
+.row-label{font-size:14px;color:var(--ink);font-weight:500;}
+.row-meta{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px;font-family:var(--mono);letter-spacing:0.02em;font-weight:400;}
+.row-amount{font-family:var(--mono);font-size:14px;color:var(--ink);text-align:right;min-width:90px;font-weight:500;}
+.row-amount.dim{color:var(--ink-soft);}
+.row-amount.accent{color:var(--accent);}
+.row-amount input{width:120px;text-align:right;font-family:var(--mono);font-size:14px;padding:8px 10px;background:var(--bg-elev);border:1px solid var(--line);border-radius:4px;transition:border-color .15s;color:var(--ink);font-weight:500;}
+.row-amount input:focus{border-color:var(--accent);}
+.row-action{font-size:11px;color:var(--ink-soft);padding:5px 10px;border:1px solid var(--line);border-radius:4px;transition:all .15s;font-family:var(--mono);letter-spacing:0.05em;font-weight:500;}
+.row-action:hover{color:var(--neg);border-color:var(--neg);}
+
+/* ============ Subscription card ============ */
+.sub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;}
+.sub-card{background:var(--bg-card);padding:14px 16px;display:flex;flex-direction:column;gap:6px;position:relative;}
+.sub-card.expired{opacity:0.55;}
+.sub-name{font-size:15px;font-weight:600;color:var(--ink);display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.sub-name-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+.sub-name-text{overflow:hidden;text-overflow:ellipsis;}
+.sub-dot{flex-shrink:0;width:10px;height:10px;border-radius:50%;background:transparent;}
+.sub-dot.warn{background:var(--warn);box-shadow:0 0 0 3px var(--warn-glow);animation:pulse 2s ease-in-out infinite;}
+.sub-dot.expired-dot{background:var(--neg);box-shadow:0 0 0 3px rgba(224,134,121,0.18);}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px var(--warn-glow);}50%{box-shadow:0 0 0 6px var(--warn-glow-soft);}}
+.sub-name.warn .sub-name-text{color:var(--warn);}
+.sub-name.expired-name .sub-name-text{color:var(--neg);}
+.sub-name .currency-tag{font-family:var(--mono);font-size:10px;color:var(--ink-soft);font-weight:500;padding:3px 7px;background:var(--bg-elev);border-radius:3px;letter-spacing:0.05em;flex-shrink:0;}
+.sub-price{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600;}
+.sub-meta{font-size:12px;color:var(--ink-soft);font-family:var(--mono);letter-spacing:0.02em;font-weight:500;}
+.sub-expires{font-size:12px;color:var(--ink-soft);margin-top:4px;font-weight:500;}
+.sub-expires.warn{color:var(--warn);font-weight:600;}
+.sub-expires.expired{color:var(--neg);}
+
+/* ============ Inline expiry date edit ============ */
+.sub-expires.editable{cursor:pointer;position:relative;}
+.sub-expires.editable:hover::after{content:' ✎';font-size:10px;opacity:0.45;font-family:var(--sans);}
+.sub-expires.editing{cursor:default;}
+.sub-expires.editing::after{display:none;}
+.sub-expires-input{display:block;width:100%;margin-top:5px;padding:5px 8px;background:var(--bg-elev);border:1px solid var(--accent);border-radius:4px;color:var(--ink);font-family:var(--mono);font-size:12px;font-weight:500;}
+.sub-expires-input:focus{outline:none;border-color:var(--ink);}
+.sub-expires-btns{display:flex;gap:6px;margin-top:5px;}
+.sub-expires-btn{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.05em;padding:3px 10px;border-radius:3px;cursor:pointer;transition:all .15s;}
+.sub-expires-btn.confirm{background:none;border:1px solid var(--accent);color:var(--accent);}
+.sub-expires-btn.confirm:hover{background:var(--accent);color:var(--bg);}
+.sub-expires-btn.cancel{background:none;border:1px solid var(--line);color:var(--ink-soft);}
+.sub-expires-btn.cancel:hover{border-color:var(--ink-soft);color:var(--ink);}
+
+/* ============ Credit card row ============ */
+.cc-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line-soft);}
+.cc-row.editable{grid-template-columns:1fr auto auto;}
+.cc-name{font-size:14px;color:var(--ink);font-weight:500;}
+.cc-stack{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0;}
+.cc-line{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;}
+.cc-tag{font-size:11px;color:var(--ink-soft);min-width:52px;text-align:left;font-weight:500;letter-spacing:0.05em;}
+.cc-val{font-weight:500;color:var(--ink);}
+.cc-val input{width:110px;text-align:right;padding:6px 10px;background:var(--bg-elev);border:1px solid var(--line);border-radius:4px;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:500;}
+.cc-val input:focus{border-color:var(--accent);}
+.cc-val.billed{color:var(--accent);}
+.cc-val.pending{color:var(--warn);font-weight:600;}
+
+/* ============ Buttons ============ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;font-size:13px;letter-spacing:0.03em;border:1px solid var(--line);border-radius:4px;background:var(--bg-card);transition:all .15s;font-family:var(--mono);color:var(--ink);font-weight:500;}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn-primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600;}
+.btn-primary:hover{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+.btn-danger{color:var(--neg);border-color:var(--neg);}
+.btn-danger:hover{background:var(--neg);color:var(--bg);}
+
+/* ============ Settings ============ */
+.settings-grid{display:grid;gap:14px;}
+@media(min-width:768px){.settings-grid{grid-template-columns:1fr 1fr;}}
+.setting-block{padding:16px 18px;background:var(--bg-card);border:1px solid var(--line);border-radius:6px;}
+.setting-block.full{grid-column:1/-1;}
+.setting-label{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px;font-weight:600;}
+.setting-input{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.setting-input input{padding:8px 12px;background:var(--bg);border:1px solid var(--line);border-radius:4px;font-family:var(--mono);font-size:14px;width:120px;color:var(--ink);font-weight:500;}
+.setting-input input:focus{border-color:var(--accent);}
+.setting-hint{font-size:12px;color:var(--ink-soft);font-weight:400;}
+
+/* ============ Rates display ============ */
+.rates{display:flex;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:16px;align-items:center;font-weight:500;}
+.rate-item{display:flex;gap:8px;align-items:baseline;}
+.rate-item strong{color:var(--accent);font-weight:600;}
+.rate-status{margin-left:auto;font-size:11px;font-weight:500;}
+.rate-status.live{color:var(--pos);}
+.rate-status.cached{color:var(--warn);}
+
+/* ============ Bank group card ============ */
+.bank-group{border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-bottom:14px;}
+.bank-group[data-tab-group].group-active{outline:2px solid var(--accent);outline-offset:3px;}
+.bank-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-elev);border-bottom:1px solid var(--line);}
+.bank-header-name{font-family:var(--serif);font-size:16px;font-weight:500;color:var(--ink);letter-spacing:-0.01em;}
+.bank-header-total{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;}
+.bank-body{background:var(--bg-card);}
+.bank-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line-soft);min-width:0;}
+.bank-row:last-child{border-bottom:none;}
+.bank-row-type{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;padding:3px 8px;border-radius:3px;white-space:nowrap;}
+.bank-row-type.deposit{background:rgba(158,197,160,0.15);color:var(--pos);}
+.bank-row-type.card{background:rgba(228,184,136,0.12);color:var(--accent);}
+.bank-row-label{font-size:13px;color:var(--ink-soft);font-weight:400;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bank-row-input input{width:110px;text-align:right;padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:4px;font-family:var(--mono);font-size:13px;color:var(--ink);font-weight:500;}
+.bank-row-input input:focus{border-color:var(--accent);}
+.bank-row-subinputs{display:flex;flex-direction:column;gap:4px;align-items:flex-end;}
+.bank-row-subline{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;}
+.bank-row-subline .cc-tag{color:var(--ink-soft);font-size:10px;min-width:48px;text-align:left;font-weight:500;letter-spacing:0.05em;}
+.bank-row-subline input{width:100px;text-align:right;padding:4px 8px;background:var(--bg);border:1px solid var(--line);border-radius:4px;font-family:var(--mono);font-size:12px;color:var(--ink);font-weight:500;}
+.bank-row-subline input:focus{border-color:var(--accent);}
+.bank-row-pending{font-family:var(--mono);font-size:12px;color:var(--warn);font-weight:600;}
+
+.other-section-title{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:0.12em;text-transform:uppercase;font-weight:600;margin:20px 0 10px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+
+/* ============ Misc ============ */
+.note{font-size:13px;color:var(--ink-soft);line-height:1.8;padding:16px 18px;background:var(--bg-elev);border-left:3px solid var(--accent-dim);margin:16px 0;border-radius:0 4px 4px 0;font-weight:400;}
+.note strong{color:var(--ink);font-weight:600;}
+.empty{text-align:center;padding:60px 20px;color:var(--ink-soft);font-style:italic;font-family:var(--serif);font-size:16px;}
+hr.div{border:none;border-top:1px solid var(--line);margin:32px 0;}
+
+/* ============ Editor input row (in edit tab) ============ */
+.editor-form{display:grid;grid-template-columns:1fr;gap:12px;padding:16px;background:var(--bg-card);border:1px solid var(--line);border-radius:6px;margin-bottom:16px;}
+@media(min-width:768px){.editor-form{grid-template-columns:repeat(4,1fr);}}
+.editor-form label{font-family:var(--mono);font-size:10px;color:var(--ink-soft);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;display:block;font-weight:600;}
+.editor-form input,.editor-form select{width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--line);border-radius:4px;font-family:var(--mono);font-size:14px;color:var(--ink);font-weight:500;}
+.editor-form input:focus,.editor-form select:focus{border-color:var(--accent);outline:none;}
+.editor-form .full-row{grid-column:1/-1;}
+.editor-form .submit-row{grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:2px;}
+
+/* ============ Mobile tweaks ============ */
+@media(max-width:600px){
+  .hero-value.huge{font-size:48px;}
+  .hero-value{font-size:32px;}
+  .section-title{font-size:20px;}
+  .tab{padding:12px 14px;font-size:13px;}
+  .tab.edit{margin-left:0;}
+  .row-amount input{width:100px;}
+}
+
+
+/* ============ Sync ============ */
+.sync-btn{background:none;border:1px solid var(--line);border-radius:20px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);transition:border-color .2s;}
+.sync-btn:hover{border-color:var(--accent);color:var(--accent);}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .4s;}
+.sync-dot.idle{background:var(--line);}
+.sync-dot.syncing{background:var(--warn);animation:pulse .8s infinite;}
+.sync-dot.ok{background:var(--pos);}
+.sync-dot.error{background:var(--neg);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.sync-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;}
+.sync-modal{background:var(--bg-card);border:1px solid var(--line);border-radius:10px;padding:24px;width:min(480px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.sync-modal h3{font-family:var(--serif);font-size:18px;font-weight:500;margin:0 0 6px;color:var(--ink);}
+.sync-modal .sync-desc{font-size:12px;color:var(--ink-faint);margin:0 0 18px;line-height:1.6;}
+.sync-field{margin-bottom:12px;}
+.sync-field label{display:block;font-size:11px;color:var(--ink-soft);letter-spacing:.06em;font-weight:600;margin-bottom:5px;}
+.sync-field input{width:100%;box-sizing:border-box;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:8px 10px;font-family:var(--mono);font-size:13px;color:var(--ink);}
+.sync-field input:focus{outline:none;border-color:var(--accent);}
+.sync-modal-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;}
+.sync-modal-actions .btn-primary{padding:8px 18px;font-size:13px;}
+.sync-modal-actions .btn-ghost{padding:8px 14px;font-size:13px;background:none;border:1px solid var(--line);border-radius:5px;color:var(--ink-soft);cursor:pointer;}
+.sync-modal-actions .btn-ghost:hover{border-color:var(--neg);color:var(--neg);}
+.sync-status-msg{font-family:var(--mono);font-size:11px;margin-top:10px;min-height:16px;}
+.sync-status-msg.ok{color:var(--pos);}
+.sync-status-msg.error{color:var(--neg);}
+.sync-status-msg.syncing{color:var(--warn);}
+
+/* ============ Keyboard navigation ============ */
+.tab-key{display:inline-block;font-family:var(--mono);font-size:9px;color:var(--ink-faint);background:var(--bg-elev);padding:2px 5px;border-radius:3px;margin-left:6px;letter-spacing:0.05em;font-weight:600;vertical-align:1px;border:1px solid var(--line);}
+.tab.active .tab-key{color:var(--accent);border-color:var(--accent-dim);}
+.subtab .tab-key{margin-left:4px;}
+
+/* visible focus ring for keyboard users */
+input:focus, select:focus, button:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+}
+.row.kb-focus, .cc-row.kb-focus, .sub-card.kb-focus{
+  background:rgba(228,184,136,0.05);
+  outline:1px solid var(--accent-dim);
+  outline-offset:-1px;
+}
+
+/* Tab-group highlight: when Tab moves to a group, highlight the entire group briefly */
+[data-tab-group].group-active{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+  border-radius:4px;
+  transition:outline-color .15s;
+}
+
+/* Keyboard help overlay */
+.kb-help-overlay{position:fixed;inset:0;background:rgba(15,14,12,0.85);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease;}
+.kb-help-overlay.open{display:flex;}
+.kb-help-panel{background:var(--bg-card);border:1px solid var(--line);border-radius:8px;padding:32px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.kb-help-title{font-family:var(--serif);font-size:24px;font-weight:500;color:var(--ink);margin-bottom:6px;letter-spacing:-0.01em;}
+.kb-help-subtitle{font-size:13px;color:var(--ink-soft);margin-bottom:24px;font-weight:500;}
+.kb-help-section{margin-bottom:22px;}
+.kb-help-section h4{font-family:var(--mono);font-size:10px;color:var(--ink-soft);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:10px;font-weight:600;}
+.kb-help-row{display:grid;grid-template-columns:auto 1fr;gap:14px;padding:8px 0;border-bottom:1px solid var(--line-soft);align-items:center;}
+.kb-help-row:last-child{border-bottom:none;}
+.kb-help-keys{display:flex;gap:5px;align-items:center;}
+.kb-key{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 8px;font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--bg-elev);border:1px solid var(--line);border-bottom:2px solid var(--line);border-radius:4px;font-weight:600;}
+.kb-key.accent{color:var(--accent);border-color:var(--accent-dim);}
+.kb-help-desc{font-size:13px;color:var(--ink-soft);font-weight:500;}
+.kb-help-close{margin-top:18px;display:flex;justify-content:flex-end;}
+
+/* Quick hint footer */
+.kb-hint{position:fixed;bottom:16px;right:16px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);background:var(--bg-card);border:1px solid var(--line);padding:8px 12px;border-radius:6px;font-weight:500;z-index:50;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px;}
+.kb-hint:hover{border-color:var(--accent);color:var(--accent);}
+.kb-hint .kb-key{height:20px;min-width:20px;font-size:11px;padding:0 6px;}
+@media(max-width:600px){.kb-hint{display:none;}}
+
+/* Toast (undo/redo notifications) */
+.toast{position:fixed;top:24px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--bg-card);border:1px solid var(--accent-dim);color:var(--ink);padding:12px 20px;border-radius:6px;font-size:13px;font-weight:500;z-index:200;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.4);opacity:0;pointer-events:none;transition:opacity .2s, transform .25s cubic-bezier(.4,0,.2,1);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast .toast-icon{font-family:var(--mono);font-weight:700;color:var(--accent);}
+.toast .toast-action{font-size:11px;color:var(--ink-soft);font-family:var(--mono);letter-spacing:0.05em;}
+.toast.disabled{border-color:var(--line);}
+.toast.disabled .toast-icon{color:var(--ink-faint);}
+
+/* ============ Mobile overflow fix ============ */
+@media(max-width:600px){
+  .tab{padding:10px 10px;font-size:12px;letter-spacing:0;}
+  .tab.edit{padding:10px 10px;}
+  .rates{flex-wrap:wrap;gap:10px 16px;}
+  .bank-row{grid-template-columns:auto 1fr auto;gap:6px;padding:8px 10px;}
+  .bank-row-input input,.bank-row-subline input{width:90px;font-size:12px;}
+  .cc-row{grid-template-columns:1fr;gap:8px;}
+  .cc-stack{align-items:flex-start;}
+  .editor-form{grid-template-columns:1fr;}
+  .sub-grid{grid-template-columns:1fr;}
+  .dash-grid{gap:0;}
+}
+
+/* ============ Drag & Drop ============ */
+.drag-handle{font-size:16px;color:var(--ink-soft);cursor:grab;padding:0 4px;user-select:none;flex-shrink:0;display:flex;align-items:center;}
+.drag-handle:active{cursor:grabbing;}
+.dragging{opacity:0.35;}
+.drag-over{outline:2px solid var(--accent);outline-offset:-1px;border-radius:4px;background:rgba(228,184,136,0.06);}
+
+/* ============ Sort bar ============ */
+.sort-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px;font-family:var(--mono);font-size:11px;}
+.sort-bar-label{color:var(--ink-soft);letter-spacing:0.08em;text-transform:uppercase;font-weight:600;}
+.sort-btn{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:0.04em;padding:4px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg-card);color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+.sort-btn:hover{border-color:var(--accent);color:var(--accent);}
+.sort-btn.active-asc::after{content:' ↑';}
+.sort-btn.active-desc::after{content:' ↓';}
+.sort-btn.active-asc,.sort-btn.active-desc{border-color:var(--accent);color:var(--accent);}
+
+/* ============ Inline field edit ============ */
+.inline-field{cursor:pointer;}
+.inline-field:hover{text-decoration:underline;text-decoration-style:dashed;text-underline-offset:3px;text-decoration-color:var(--accent-dim);}
+.inline-edit-input{font-family:var(--mono);font-size:14px;padding:4px 8px;background:var(--bg-elev);border:1px solid var(--accent);border-radius:4px;color:var(--ink);font-weight:500;outline:none;width:100%;box-sizing:border-box;}
+.inline-edit-input.sm{font-size:12px;padding:3px 7px;}
+
+/* ============ Edit row with drag handle ============ */
+.row.editable.has-handle{grid-template-columns:auto 1fr auto auto;gap:8px;}
+
+/* ============ Debit Reminders ============ */
+.debit-grid{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-top:4px;}
+.debit-row{display:grid;grid-template-columns:auto 1fr;gap:0;background:var(--bg-card);align-items:stretch;}
+.debit-date-col{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 16px;border-right:1px solid var(--line);min-width:72px;background:var(--bg-elev);}
+.debit-date-num{font-family:var(--serif);font-size:22px;font-weight:500;color:var(--ink);letter-spacing:-0.02em;line-height:1;}
+.debit-date-days{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:0.06em;margin-top:4px;}
+.debit-body{padding:12px 16px;display:flex;flex-direction:column;gap:6px;}
+.debit-bank-name{font-family:var(--serif);font-size:15px;font-weight:500;color:var(--ink);}
+.debit-cards-list{font-family:var(--mono);font-size:12px;color:var(--ink-soft);line-height:1.6;}
+.debit-status{font-family:var(--mono);font-size:13px;font-weight:600;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.debit-status .need{color:var(--ink);}
+.debit-status .have{color:var(--ink-soft);}
+.debit-status .diff-ok{color:var(--pos);}
+.debit-status .diff-warn{color:var(--neg);}
+.debit-empty{text-align:center;padding:20px;font-size:13px;color:var(--ink-soft);font-family:var(--mono);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ Header ============ -->
+  <header class="header">
+    <div class="brand">Wei <em>財務</em></div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="sync-btn" id="syncBtn" onclick="openSyncModal()" title="雲端同步">
+        <span id="syncDot" class="sync-dot idle"></span>
+        <span id="syncLabel">☁ 同步</span>
+      </button>
+      <div class="date-pill" id="todayLabel">2026/05/22（週五）</div>
+    </div>
+  </header>
+
+  <!-- ============ Sync Modal ============ -->
+  <div id="syncModal" class="sync-modal-overlay" style="display:none" onclick="if(event.target===this)closeSyncModal()">
+    <div class="sync-modal">
+      <h3>☁ GitHub Gist 同步</h3>
+      <p class="sync-desc">輸入你的 GitHub Personal Access Token 和私密 Gist ID，即可跨裝置同步財務數據。數據加密儲存在你的 GitHub 帳號，只有你能存取。</p>
+      <div class="sync-field">
+        <label>PERSONAL ACCESS TOKEN（需有 gist 權限）</label>
+        <input id="syncToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off">
+      </div>
+      <div class="sync-field">
+        <label>GIST ID（網址最後那段，約 32 碼）</label>
+        <input id="syncGistId" type="text" placeholder="a1b2c3d4e5f6..." autocomplete="off">
+      </div>
+      <div id="syncModalMsg" class="sync-status-msg"></div>
+      <div class="sync-modal-actions">
+        <button class="btn-primary" onclick="connectGist()">連線並同步</button>
+        <button class="btn-ghost" onclick="closeSyncModal()">取消</button>
+        <button class="btn-ghost" id="syncDisconnectBtn" onclick="disconnectGist()" style="display:none;margin-left:auto;">中斷連線</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Tabs ============ -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="dashboard">儀表板<span class="tab-key">1</span></button>
+    <button class="tab" data-tab="assets">資產<span class="tab-key">2</span></button>
+    <button class="tab" data-tab="subs">訂閱<span class="tab-key">3</span></button>
+    <button class="tab" data-tab="cards">信用卡<span class="tab-key">4</span></button>
+    <button class="tab edit" data-tab="edit">✏ 編輯<span class="tab-key">5</span></button>
+  </nav>
+
+  <!-- ============ DASHBOARD ============ -->
+  <section class="tab-content active" id="tab-dashboard">
+
+    <div class="rates">
+      <div class="rate-item">JPY → TWD <strong id="rJPY">0.2100</strong></div>
+      <div class="rate-item">KRW → TWD <strong id="rKRW">0.02200</strong></div>
+      <div class="rate-item">USD → TWD <strong id="rUSD">31.500</strong></div>
+      <div class="rate-status cached" id="rateStatus">使用快取匯率</div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="hero-cell primary dash-primary">
+        <div class="hero-label">每日可花 · 餐費及娛樂</div>
+        <div class="hero-value huge"><span class="currency">NT$</span><span id="dailyBudget">-35,543</span></div>
+        <div class="countdown">
+          <span class="countdown-num" id="daysLeft">3</span>
+          <span class="countdown-txt">天到下個結算日</span>
+        </div>
+        <div class="progress"><div class="progress-fill" id="cycleProgress" style="width: 92.9%;"></div></div>
+        <div class="dash-formula">
+          可動資產 ÷ 剩餘天數 · 可動資產 = 總資產 − 固定開銷 − 信用卡
+        </div>
+      </div>
+
+      <div class="hero-cell dash-cell">
+        <div class="hero-label">可動資產</div>
+        <div class="hero-value negative" id="movableValue"><span class="currency">NT$</span>-106,628</div>
+        <div class="hero-sub" id="movableNote">⚠ 已超出本月預算</div>
+      </div>
+
+      <div class="hero-cell dash-cell">
+        <div class="hero-label">總資產</div>
+        <div class="hero-value" id="totalAssetValue"><span class="currency">NT$</span>129,405</div>
+        <div class="hero-sub" id="totalAssetNote">12 個帳戶</div>
+      </div>
+
+      <div class="hero-cell dash-cell">
+        <div class="hero-label">固定開銷</div>
+        <div class="hero-value mid"><span class="currency">NT$</span><span id="fixedTotal">38,896</span></div>
+        <div class="hero-sub" id="fixedNote">含餐費 1,200 · 訂閱 1,528</div>
+      </div>
+
+      <div class="hero-cell dash-cell">
+        <div class="hero-label">信用卡待扣</div>
+        <div class="hero-value mid"><span class="currency">NT$</span><span id="ccTotal">197,137</span></div>
+        <div class="hero-sub" id="ccNote">4 張卡有額度使用</div>
+      </div>
+    </div>
+    <div class="section" style="margin-top:20px;">
+      <div class="section-head">
+        <h2 class="section-title">扣繳提醒</h2>
+        <span class="section-total" id="debitSummary"></span>
+      </div>
+      <div id="debitReminders"></div>
+    </div>
+  </section>
+
+  <!-- ============ ASSETS (view only) ============ -->
+  <section class="tab-content" id="tab-assets">
+    <div class="two-col">
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">資產<span class="num" id="assetsCount">12</span></h2>
+          <span class="section-total" id="assetsSum">合計 NT$ 129,405</span>
+        </div>
+        <div id="assetsList"><div class="row">
+      <div>
+        <div class="row-label">中信存款</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 50,763</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">永豐存款（台幣）</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 0</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">永豐存款（日幣）</div>
+        <span class="row-meta">JPY · 原幣 5,580</span>
+      </div>
+      <div class="row-amount">NT$ 1,172</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">永豐存款（美金）</div>
+        <span class="row-meta">USD · 原幣 0</span>
+      </div>
+      <div class="row-amount">NT$ 0</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">國泰世華存款</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 39,401</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">星展存款</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 4,361</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">郵局存款</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 214</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">錢包現金</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 2,100</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">Line Pay Money</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 40</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">Line Points</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 456</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">手錶一卡通</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 278</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">渣打存款</div>
+        <span class="row-meta">TWD</span>
+      </div>
+      <div class="row-amount">NT$ 30,620</div>
+    </div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">固定開銷<span class="num" id="expCount">7</span></h2>
+          <span class="section-total" id="expSum">合計 NT$ 37,368 /月</span>
+        </div>
+        <div id="expensesList"><div class="row">
+      <div>
+        <div class="row-label" style="color:var(--accent);">⚙ 餐費（每日基本×剩餘天數）</div>
+        <span class="row-meta">NT$ 400 × 3 天 · 由設定計算</span>
+      </div>
+      <div class="row-amount accent">NT$ 1,200</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label" style="color:var(--accent);">⚙ 交通費（每日基本×剩餘天數）</div>
+        <span class="row-meta">NT$ 40 × 3 天 · 由設定計算</span>
+      </div>
+      <div class="row-amount accent">NT$ 120</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">台哥大電信費</div>
+        <span class="row-meta">每月</span>
+      </div>
+      <div class="row-amount">NT$ 2,321</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">中華寬頻電信費</div>
+        <span class="row-meta">每月1號</span>
+      </div>
+      <div class="row-amount">NT$ 1,607</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">水費</div>
+        <span class="row-meta">偶數月</span>
+      </div>
+      <div class="row-amount">NT$ 500</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">電費</div>
+        <span class="row-meta">奇數月</span>
+      </div>
+      <div class="row-amount">NT$ 1,000</div>
+    </div><div class="row">
+      <div>
+        <div class="row-label">房屋貸款</div>
+        <span class="row-meta">每月</span>
+      </div>
+      <div class="row-amount">NT$ 30,620</div>
+    </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SUBSCRIPTIONS (view only) ============ -->
+  <section class="tab-content" id="tab-subs">
+    <div class="section">
+      <div class="section-head">
+        <h2 class="section-title">訂閱總覽<span class="num" id="subCount">12</span></h2>
+        <span class="section-total" id="subSum">合計 NT$ 1,528 /月</span>
+      </div>
+      <div class="sub-grid" id="subsList"><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">勇者系列贊助訂閱</span>
+        </div>
+        <span class="currency-tag">TWD</span>
+      </div>
+      <div class="sub-price">
+        80 TWD / 月
+        
+      </div>
+      <div class="sub-meta">每月80</div>
+      <div class="sub-expires ">每月訂閱</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">YOASOBI 會員費</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        440 JPY / 月
+         · 月均 NT$ 94
+      </div>
+      <div class="sub-meta">每月220日幣×2人</div>
+      <div class="sub-expires ">每月訂閱</div>
+    </div><div class="sub-card expired">
+      <div class="sub-name expired-name">
+        <div class="sub-name-left">
+          <span class="sub-dot expired-dot"></span>
+          <span class="sub-name-text">Ado 會費</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        6,600 JPY / 年
+         · 月均 NT$ 116
+      </div>
+      <div class="sub-meta">年費</div>
+      <div class="sub-expires expired">⚠ 已到期 16 天</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">tuki. 月人會費</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        1,100 JPY / 月
+         · 月均 NT$ 231
+      </div>
+      <div class="sub-meta">2025/9/9 起</div>
+      <div class="sub-expires ">每月訂閱</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">Phantom Siita 會費</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        6,600 JPY / 年
+         · 月均 NT$ 116
+      </div>
+      <div class="sub-meta">年費</div>
+      <div class="sub-expires ">54 天後到期 (2026-07-15)</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">Babymonster（Weverse）</span>
+        </div>
+        <span class="currency-tag">KRW</span>
+      </div>
+      <div class="sub-price">
+        25,000 KRW / 年
+         · 月均 NT$ 46
+      </div>
+      <div class="sub-meta">年費</div>
+      <div class="sub-expires ">169 天後到期 (2026-11-07)</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">Babymonster（JP）</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        6,600 JPY / 年
+         · 月均 NT$ 116
+      </div>
+      <div class="sub-meta">年費</div>
+      <div class="sub-expires ">223 天後到期 (2026-12-31)</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">Zutomayo</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        6,600 JPY / 年
+         · 月均 NT$ 116
+      </div>
+      <div class="sub-meta">年費</div>
+      <div class="sub-expires ">245 天後到期 (2027-01-22)</div>
+    </div><div class="sub-card ">
+      <div class="sub-name warn">
+        <div class="sub-name-left">
+          <span class="sub-dot warn"></span>
+          <span class="sub-name-text">Fruits Zipper</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        10,560 JPY / 年
+         · 月均 NT$ 185
+      </div>
+      <div class="sub-meta">年費</div>
+      <div class="sub-expires warn">⚠ 15 天後到期 (2026-06-06)</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">高嶺のなでしこ</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        880 JPY / 月
+         · 月均 NT$ 185
+      </div>
+      <div class="sub-meta">550 FC + 330 ひめりmessege</div>
+      <div class="sub-expires ">每月訂閱</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">Weverse Yui</span>
+        </div>
+        <span class="currency-tag">TWD</span>
+      </div>
+      <div class="sub-price">
+        130 TWD / 月
+        
+      </div>
+      <div class="sub-meta">優衣 DM</div>
+      <div class="sub-expires ">每月訂閱</div>
+    </div><div class="sub-card ">
+      <div class="sub-name ">
+        <div class="sub-name-left">
+          
+          <span class="sub-name-text">Openrec.tv Kawaii Lab</span>
+        </div>
+        <span class="currency-tag">JPY</span>
+      </div>
+      <div class="sub-price">
+        550 JPY / 月
+         · 月均 NT$ 116
+      </div>
+      
+      <div class="sub-expires ">每月訂閱</div>
+    </div></div>
+    </div>
+  </section>
+
+  <!-- ============ CARDS (view only) ============ -->
+  <section class="tab-content" id="tab-cards">
+    <div class="section">
+      <div class="section-head">
+        <h2 class="section-title">信用卡總覽<span class="num" id="ccCount">7</span></h2>
+        <span class="section-total" id="ccSum">合計待扣 NT$ 197,137</span>
+      </div>
+      <div class="note">
+        每張卡分「<strong>已出帳</strong>」（這期帳單金額）與「<strong>未出帳</strong>」（額度 − 可用額度 − 已出帳）。<br>
+        未出帳金額會在你刷卡後即時改變，是「遲早要扣的錢」。
+      </div>
+      <div id="cardsList"><div class="cc-row">
+      <div>
+        <div class="cc-name">中信信用卡</div>
+        <span class="row-meta">中信帳戶自動扣繳</span>
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ 148,786</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ 451,214 / 600,000</span></div>
+      </div>
+    </div><div class="cc-row">
+      <div>
+        <div class="cc-name">國泰世華信用卡</div>
+        <span class="row-meta">國泰帳戶自動扣繳</span>
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ 39,401</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ 848</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ 359,751 / 400,000</span></div>
+      </div>
+    </div><div class="cc-row">
+      <div>
+        <div class="cc-name">新光信用卡</div>
+        
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ 0 / 0</span></div>
+      </div>
+    </div><div class="cc-row">
+      <div>
+        <div class="cc-name">台新信用卡</div>
+        <span class="row-meta">中信帳戶自動扣繳</span>
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ 2,861</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ 0 / 0</span></div>
+      </div>
+    </div><div class="cc-row">
+      <div>
+        <div class="cc-name">星展信用卡</div>
+        <span class="row-meta">星展帳戶自動扣繳</span>
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ 4,361</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ 880</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ 114,759 / 120,000</span></div>
+      </div>
+    </div><div class="cc-row">
+      <div>
+        <div class="cc-name">永豐信用卡（台幣）</div>
+        
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ 0 / 0</span></div>
+      </div>
+    </div><div class="cc-row">
+      <div>
+        <div class="cc-name">富邦信用卡</div>
+        <span class="row-meta">富邦自動扣繳</span>
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ 0</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ 0 / 0</span></div>
+      </div>
+    </div></div>
+    </div>
+  </section>
+
+  <!-- ============ EDIT (all inputs here) ============ -->
+  <section class="tab-content" id="tab-edit">
+
+    <div class="subtabs">
+      <button class="subtab active" data-sub="edit-banks">銀行帳戶<span class="tab-key">Q</span></button>
+      <button class="subtab" data-sub="edit-expenses">固定開銷<span class="tab-key">W</span></button>
+      <button class="subtab" data-sub="edit-subs">訂閱<span class="tab-key">E</span></button>
+      <button class="subtab" data-sub="edit-settings">設定<span class="tab-key">R</span></button>
+    </div>
+
+    <!-- Edit: Banks -->
+    <div class="subtab-content active" id="edit-banks">
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">銀行帳戶</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn" onclick="showAddForm(&#39;asset&#39;)">+ 新增存款帳戶</button>
+            <button class="btn" onclick="showAddForm(&#39;card&#39;)">+ 新增信用卡</button>
+          </div>
+        </div>
+
+        <div class="editor-form" id="addAssetForm" data-tab-group="" style="display:none;">
+          <div><label>帳戶名稱</label><input type="text" id="newAssetName" placeholder="例：玉山存款"></div>
+          <div><label>金額</label><input type="number" id="newAssetAmount" placeholder="0" step="any"></div>
+          <div><label>幣別</label>
+            <select id="newAssetCurrency">
+              <option value="TWD">TWD 台幣</option>
+              <option value="JPY">JPY 日幣</option>
+              <option value="KRW">KRW 韓圜</option>
+              <option value="USD">USD 美金</option>
+            </select>
+          </div>
+          <div class="full-row submit-row">
+            <button class="btn" onclick="hideAddForms()">取消</button>
+            <button class="btn btn-primary" onclick="addAsset()">確認新增</button>
+          </div>
+        </div>
+
+        <div class="editor-form" id="addCardForm" data-tab-group="" style="display:none;">
+          <div><label>卡名</label><input type="text" id="newCardName" placeholder="例：花旗信用卡"></div>
+          <div><label>已出帳</label><input type="number" id="newCardBilled" placeholder="0" step="any"></div>
+          <div><label>額度</label><input type="number" id="newCardLimit" placeholder="0" step="any"></div>
+          <div><label>可用額度</label><input type="number" id="newCardAvailable" placeholder="0" step="any"></div>
+          <div><label>備註</label><input type="text" id="newCardNote" placeholder="例：自動扣繳"></div>
+          <div><label>扣繳日（每月幾號）</label><input type="number" id="newCardDebitDay" min="1" max="31" placeholder="日"></div>
+          <div><label>扣帳銀行</label><input type="text" id="newCardDebitBank" placeholder="例：中信"></div>
+          <div class="full-row submit-row">
+            <button class="btn" onclick="hideAddForms()">取消</button>
+            <button class="btn btn-primary" onclick="addCard()">確認新增</button>
+          </div>
+        </div>
+
+        <div id="editBanksList"><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">中信</span>
+      <span class="bank-header-total">存款 NT$ 50,763 · 卡片待扣 NT$ 148,786</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">中信存款</span>
+        <div class="bank-row-input">
+          <input type="number" value="50763" onchange="updateAsset(&#39;a1&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a1&#39;)">移除</button>
+      </div><div class="bank-row">
+        <span class="drag-handle" title="拖移排序">⠿</span>
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label">中信信用卡<br><span style="color:var(--ink-faint);font-size:10px;">中信帳戶自動扣繳</span></span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="0" onchange="updateCard(&#39;c1&#39;,&#39;billed&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="600000" onchange="updateCard(&#39;c1&#39;,&#39;limit&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="451214" onchange="updateCard(&#39;c1&#39;,&#39;available&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ 148,786</span></div>
+        </div>
+        <button class="row-action" onclick="removeCard(&#39;c1&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">國泰世華</span>
+      <span class="bank-header-total">存款 NT$ 39,401 · 卡片待扣 NT$ 40,249</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">國泰世華存款</span>
+        <div class="bank-row-input">
+          <input type="number" value="39401" onchange="updateAsset(&#39;a5&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a5&#39;)">移除</button>
+      </div><div class="bank-row">
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label">國泰世華信用卡<br><span style="color:var(--ink-faint);font-size:10px;">國泰帳戶自動扣繳</span></span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="39401" onchange="updateCard(&#39;c2&#39;,&#39;billed&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="400000" onchange="updateCard(&#39;c2&#39;,&#39;limit&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="359751" onchange="updateCard(&#39;c2&#39;,&#39;available&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ 848</span></div>
+        </div>
+        <button class="row-action" onclick="removeCard(&#39;c2&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">星展</span>
+      <span class="bank-header-total">存款 NT$ 4,361 · 卡片待扣 NT$ 5,241</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">星展存款</span>
+        <div class="bank-row-input">
+          <input type="number" value="4361" onchange="updateAsset(&#39;a6&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a6&#39;)">移除</button>
+      </div><div class="bank-row">
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label">星展信用卡<br><span style="color:var(--ink-faint);font-size:10px;">星展帳戶自動扣繳</span></span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="4361" onchange="updateCard(&#39;c5&#39;,&#39;billed&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="120000" onchange="updateCard(&#39;c5&#39;,&#39;limit&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="114759" onchange="updateCard(&#39;c5&#39;,&#39;available&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ 880</span></div>
+        </div>
+        <button class="row-action" onclick="removeCard(&#39;c5&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">永豐</span>
+      <span class="bank-header-total">存款 NT$ 1,172</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">永豐存款（台幣）</span>
+        <div class="bank-row-input">
+          <input type="number" value="0" onchange="updateAsset(&#39;a2&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a2&#39;)">移除</button>
+      </div><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">永豐存款（日幣） <span style="color:var(--ink-faint);font-size:11px;">JPY</span></span>
+        <div class="bank-row-input">
+          <input type="number" value="5580" onchange="updateAsset(&#39;a3&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a3&#39;)">移除</button>
+      </div><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">永豐存款（美金） <span style="color:var(--ink-faint);font-size:11px;">USD</span></span>
+        <div class="bank-row-input">
+          <input type="number" value="0" onchange="updateAsset(&#39;a4&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a4&#39;)">移除</button>
+      </div><div class="bank-row">
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label">永豐信用卡（台幣）</span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="0" onchange="updateCard(&#39;c6&#39;,&#39;billed&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="0" onchange="updateCard(&#39;c6&#39;,&#39;limit&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="0" onchange="updateCard(&#39;c6&#39;,&#39;available&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ 0</span></div>
+        </div>
+        <button class="row-action" onclick="removeCard(&#39;c6&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">富邦</span>
+      <span class="bank-header-total">存款 NT$ 0</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label">富邦信用卡<br><span style="color:var(--ink-faint);font-size:10px;">富邦自動扣繳</span></span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="0" onchange="updateCard(&#39;c7&#39;,&#39;billed&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="0" onchange="updateCard(&#39;c7&#39;,&#39;limit&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="0" onchange="updateCard(&#39;c7&#39;,&#39;available&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ 0</span></div>
+        </div>
+        <button class="row-action" onclick="removeCard(&#39;c7&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">渣打</span>
+      <span class="bank-header-total">存款 NT$ 30,620</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">渣打存款</span>
+        <div class="bank-row-input">
+          <input type="number" value="30620" onchange="updateAsset(&#39;a12&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a12&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">郵局</span>
+      <span class="bank-header-total">存款 NT$ 214</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">郵局存款</span>
+        <div class="bank-row-input">
+          <input type="number" value="214" onchange="updateAsset(&#39;a7&#39;,&#39;amount&#39;,this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset(&#39;a7&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">新光</span>
+      <span class="bank-header-total">存款 NT$ 0</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label">新光信用卡</span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="0" onchange="updateCard(&#39;c3&#39;,&#39;billed&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="0" onchange="updateCard(&#39;c3&#39;,&#39;limit&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="0" onchange="updateCard(&#39;c3&#39;,&#39;available&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ 0</span></div>
+        </div>
+        <button class="row-action" onclick="removeCard(&#39;c3&#39;)">移除</button>
+      </div></div></div><div class="bank-group" data-tab-group=""><div class="bank-header">
+      <span class="bank-header-name">台新</span>
+      <span class="bank-header-total">存款 NT$ 0 · 卡片待扣 NT$ 2,861</span>
+    </div><div class="bank-body"><div class="bank-row">
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label">台新信用卡<br><span style="color:var(--ink-faint);font-size:10px;">中信帳戶自動扣繳</span></span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="2861" onchange="updateCard(&#39;c4&#39;,&#39;billed&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="0" onchange="updateCard(&#39;c4&#39;,&#39;limit&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="0" onchange="updateCard(&#39;c4&#39;,&#39;available&#39;,this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ 0</span></div>
+        </div>
+        <button class="row-action" onclick="removeCard(&#39;c4&#39;)">移除</button>
+      </div></div></div></div>
+        <div id="editOtherAssets"><div class="other-section-title">其他帳戶</div><div class="row editable" data-tab-group="">
+        <div>
+          <div class="row-label">錢包現金</div>
+          <span class="row-meta">TWD</span>
+        </div>
+        <div class="row-amount"><input type="number" value="2100" onchange="updateAsset(&#39;a8&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+        <button class="row-action" onclick="removeAsset(&#39;a8&#39;)">移除</button>
+      </div><div class="row editable" data-tab-group="">
+        <div>
+          <div class="row-label">Line Pay Money</div>
+          <span class="row-meta">TWD</span>
+        </div>
+        <div class="row-amount"><input type="number" value="40" onchange="updateAsset(&#39;a9&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+        <button class="row-action" onclick="removeAsset(&#39;a9&#39;)">移除</button>
+      </div><div class="row editable" data-tab-group="">
+        <div>
+          <div class="row-label">Line Points</div>
+          <span class="row-meta">TWD</span>
+        </div>
+        <div class="row-amount"><input type="number" value="456" onchange="updateAsset(&#39;a10&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+        <button class="row-action" onclick="removeAsset(&#39;a10&#39;)">移除</button>
+      </div><div class="row editable" data-tab-group="">
+        <div>
+          <div class="row-label">手錶一卡通</div>
+          <span class="row-meta">TWD</span>
+        </div>
+        <div class="row-amount"><input type="number" value="278" onchange="updateAsset(&#39;a11&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+        <button class="row-action" onclick="removeAsset(&#39;a11&#39;)">移除</button>
+      </div></div>
+      </div>
+    </div>
+
+    <!-- Edit: Expenses -->
+
+    <div class="subtab-content" id="edit-expenses">
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">編輯固定開銷</h2>
+        </div>
+        <div class="editor-form" data-tab-group="">
+          <div><label>名稱</label><input type="text" id="newExpName" placeholder="例：保險費"></div>
+          <div><label>金額（台幣）</label><input type="number" id="newExpAmount" placeholder="0" step="any"></div>
+          <div class="full-row"><label>備註</label><input type="text" id="newExpNote" placeholder="例：每月 5 號"></div>
+          <div class="submit-row"><button class="btn btn-primary" onclick="addExpense()">+ 新增項目</button></div>
+        </div>
+        <div class="note">餐費與交通費由「設定」分頁的「每日基本值」自動計算，不需在此編輯。</div>
+        <div id="editExpensesList"><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">台哥大電信費</div>
+        <span class="row-meta">每月</span>
+      </div>
+      <div class="row-amount"><input type="number" value="2321" onchange="updateExpense(&#39;e1&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeExpense(&#39;e1&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">中華寬頻電信費</div>
+        <span class="row-meta">每月1號</span>
+      </div>
+      <div class="row-amount"><input type="number" value="1607" onchange="updateExpense(&#39;e2&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeExpense(&#39;e2&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">水費</div>
+        <span class="row-meta">偶數月</span>
+      </div>
+      <div class="row-amount"><input type="number" value="500" onchange="updateExpense(&#39;e3&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeExpense(&#39;e3&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">電費</div>
+        <span class="row-meta">奇數月</span>
+      </div>
+      <div class="row-amount"><input type="number" value="1000" onchange="updateExpense(&#39;e4&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeExpense(&#39;e4&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">房屋貸款</div>
+        <span class="row-meta">每月</span>
+      </div>
+      <div class="row-amount"><input type="number" value="30620" onchange="updateExpense(&#39;e5&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeExpense(&#39;e5&#39;)">移除</button>
+    </div></div>
+      </div>
+    </div>
+
+    <!-- Edit: Subs -->
+    <div class="subtab-content" id="edit-subs">
+      <div class="section">
+        <div class="section-head">
+          <h2 class="section-title">編輯訂閱</h2>
+        </div>
+        <div class="editor-form" data-tab-group="">
+          <div><label>名稱</label><input type="text" id="newSubName" placeholder="例：Netflix"></div>
+          <div><label>金額</label><input type="number" id="newSubAmount" placeholder="0" step="any"></div>
+          <div><label>幣別</label>
+            <select id="newSubCurrency">
+              <option value="TWD">TWD</option>
+              <option value="JPY" selected="">JPY</option>
+              <option value="KRW">KRW</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          <div><label>週期</label>
+            <select id="newSubCycle">
+              <option value="monthly">每月</option>
+              <option value="yearly">每年</option>
+            </select>
+          </div>
+          <div><label>到期日（可空）</label><input type="date" id="newSubExpires"></div>
+          <div><label>開始日（可空）</label><input type="date" id="newSubStartDate"></div>
+          <div class="full-row"><label>備註</label><input type="text" id="newSubNote" placeholder="例：年費 550FC+330訊息"></div>
+          <div class="submit-row"><button class="btn btn-primary" onclick="addSub()">+ 新增訂閱</button></div>
+        </div>
+        <div id="editSubsList"><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">勇者系列贊助訂閱 <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· TWD /月</span></div>
+        <span class="row-meta">每月80</span>
+      </div>
+      <div class="row-amount"><input type="number" value="80" onchange="updateSub(&#39;s1&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s1&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">YOASOBI 會員費 <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /月</span></div>
+        <span class="row-meta">每月220日幣×2人</span>
+      </div>
+      <div class="row-amount"><input type="number" value="440" onchange="updateSub(&#39;s2&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s2&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Ado 會費 <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /年</span></div>
+        <span class="row-meta">年費 · 到期 2026-05-06</span>
+      </div>
+      <div class="row-amount"><input type="number" value="6600" onchange="updateSub(&#39;s3&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s3&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">tuki. 月人會費 <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /月</span></div>
+        <span class="row-meta">2025/9/9 起</span>
+      </div>
+      <div class="row-amount"><input type="number" value="1100" onchange="updateSub(&#39;s4&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s4&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Phantom Siita 會費 <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /年</span></div>
+        <span class="row-meta">年費 · 到期 2026-07-15</span>
+      </div>
+      <div class="row-amount"><input type="number" value="6600" onchange="updateSub(&#39;s5&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s5&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Babymonster（Weverse） <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· KRW /年</span></div>
+        <span class="row-meta">年費 · 到期 2026-11-07</span>
+      </div>
+      <div class="row-amount"><input type="number" value="25000" onchange="updateSub(&#39;s6&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s6&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Babymonster（JP） <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /年</span></div>
+        <span class="row-meta">年費 · 到期 2026-12-31</span>
+      </div>
+      <div class="row-amount"><input type="number" value="6600" onchange="updateSub(&#39;s7&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s7&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Zutomayo <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /年</span></div>
+        <span class="row-meta">年費 · 到期 2027-01-22</span>
+      </div>
+      <div class="row-amount"><input type="number" value="6600" onchange="updateSub(&#39;s8&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s8&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Fruits Zipper <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /年</span></div>
+        <span class="row-meta">年費 · 到期 2026-06-06</span>
+      </div>
+      <div class="row-amount"><input type="number" value="10560" onchange="updateSub(&#39;s9&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s9&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">高嶺のなでしこ <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /月</span></div>
+        <span class="row-meta">550 FC + 330 ひめりmessege</span>
+      </div>
+      <div class="row-amount"><input type="number" value="880" onchange="updateSub(&#39;s10&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s10&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Weverse Yui <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· TWD /月</span></div>
+        <span class="row-meta">優衣 DM</span>
+      </div>
+      <div class="row-amount"><input type="number" value="130" onchange="updateSub(&#39;s11&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s11&#39;)">移除</button>
+    </div><div class="row editable" data-tab-group="">
+      <div>
+        <div class="row-label">Openrec.tv Kawaii Lab <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· JPY /月</span></div>
+        
+      </div>
+      <div class="row-amount"><input type="number" value="550" onchange="updateSub(&#39;s12&#39;,&#39;amount&#39;,this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub(&#39;s12&#39;)">移除</button>
+    </div></div>
+      </div>
+    </div>
+
+    <!-- Edit: Settings -->
+    <div class="subtab-content" id="edit-settings">
+      <div class="section">
+        <div class="section-head"><h2 class="section-title">設定</h2></div>
+        <div class="settings-grid">
+          <div class="setting-block" data-tab-group="">
+            <div class="setting-label">結算日（每月幾號）</div>
+            <div class="setting-input">
+              <input type="number" id="cycleDay" min="1" max="31" value="25" onchange="updateCycleDay()">
+              <span class="setting-hint">薪水入帳/週期重置日</span>
+            </div>
+          </div>
+          <div class="setting-block" data-tab-group="">
+            <div class="setting-label">每日基本餐費（TWD）</div>
+            <div class="setting-input">
+              <input type="number" id="dailyFood" value="400" onchange="updateDailyFood()">
+              <span class="setting-hint">會自動 × 剩餘天數</span>
+            </div>
+          </div>
+          <div class="setting-block" data-tab-group="">
+            <div class="setting-label">每日基本交通費（TWD）</div>
+            <div class="setting-input">
+              <input type="number" id="dailyTransport" value="40" onchange="updateDailyTransport()">
+              <span class="setting-hint">會自動 × 剩餘天數</span>
+            </div>
+          </div>
+          <div class="setting-block full" data-tab-group="">
+            <div class="setting-label">資料管理</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn" onclick="exportData()">⬇ 匯出 JSON 備份</button>
+              <button class="btn" onclick="document.getElementById(&#39;importFile&#39;).click()">⬆ 匯入 JSON</button>
+              <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+              <button class="btn btn-danger" onclick="resetAll()">↻ 重置所有資料</button>
+            </div>
+            <p class="setting-hint" style="margin-top:14px;line-height:1.8;">
+              資料儲存於瀏覽器 localStorage。<br>
+              換裝置時請先匯出備份再到新裝置匯入。
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<!-- ============ Keyboard help overlay ============ -->
+<div class="kb-help-overlay" id="kbHelpOverlay" onclick="if(event.target===this)closeKbHelp()">
+  <div class="kb-help-panel">
+    <div class="kb-help-title">鍵盤快捷鍵</div>
+    <div class="kb-help-subtitle">按 <span class="kb-key">?</span> 或 <span class="kb-key">Esc</span> 關閉此面板</div>
+
+    <div class="kb-help-section">
+      <h4>切換主分頁</h4>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">1</span></div><div class="kb-help-desc">儀表板</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">2</span></div><div class="kb-help-desc">資產總覽</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">3</span></div><div class="kb-help-desc">訂閱總覽</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">4</span></div><div class="kb-help-desc">信用卡總覽</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">5</span></div><div class="kb-help-desc">編輯</div></div>
+    </div>
+
+    <div class="kb-help-section">
+      <h4>編輯分頁內的子分頁</h4>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">Q</span></div><div class="kb-help-desc">編輯資產</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">W</span></div><div class="kb-help-desc">編輯固定開銷</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">E</span></div><div class="kb-help-desc">編輯訂閱</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">R</span></div><div class="kb-help-desc">編輯信用卡</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key accent">T</span></div><div class="kb-help-desc">設定</div></div>
+    </div>
+
+    <div class="kb-help-section">
+      <h4>復原與反復原</h4>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">Ctrl</span>+<span class="kb-key">Z</span></div><div class="kb-help-desc">復原上一個編輯動作（Mac：<span class="kb-key">⌘</span>+<span class="kb-key">Z</span>）</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">Ctrl</span>+<span class="kb-key">Y</span></div><div class="kb-help-desc">反復原</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">⌘</span>+<span class="kb-key">⇧</span>+<span class="kb-key">Z</span></div><div class="kb-help-desc">反復原（Mac）</div></div>
+    </div>
+
+    <div class="kb-help-section">
+      <h4>導航與操作</h4>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">Tab</span> <span style="color:var(--ink-faint);">/</span> <span class="kb-key">⇧Tab</span></div><div class="kb-help-desc">跳下一個 / 上一個「大項目」（卡片、表單、設定區塊）</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">J</span> <span style="color:var(--ink-faint);">或</span> <span class="kb-key">↓</span></div><div class="kb-help-desc">下一個「欄位」</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">K</span> <span style="color:var(--ink-faint);">或</span> <span class="kb-key">↑</span></div><div class="kb-help-desc">上一個「欄位」</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">N</span></div><div class="kb-help-desc">跳到「新增」表單第一欄</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">Enter</span></div><div class="kb-help-desc">在新增表單裡 → 送出</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">G</span></div><div class="kb-help-desc">回到頁面頂部</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">Esc</span></div><div class="kb-help-desc">跳離輸入框 / 關閉面板</div></div>
+      <div class="kb-help-row"><div class="kb-help-keys"><span class="kb-key">?</span></div><div class="kb-help-desc">顯示／隱藏此面板</div></div>
+    </div>
+
+    <div class="kb-help-close"><button class="btn btn-primary" onclick="closeKbHelp()">了解</button></div>
+  </div>
+</div>
+
+<!-- ============ Keyboard hint (right bottom) ============ -->
+<div class="kb-hint" onclick="openKbHelp()" title="顯示快捷鍵">
+  <span class="kb-key">?</span>
+  <span>快捷鍵</span>
+</div>
+
+<!-- ============ Toast for undo/redo ============ -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toastIcon">↶</span>
+  <span id="toastText">已復原</span>
+  <span class="toast-action" id="toastAction"></span>
+</div>
+
+<script>
+/* ============================================================
+   Wei 財務 App · v2
+   ============================================================ */
+
+const DEFAULT_DATA = {
+  settings:{ cycleDay:25, dailyFood:400, dailyTransport:40 },
+  assets:[
+    {id:'a1', name:'中信存款', amount:50763, currency:'TWD'},
+    {id:'a2', name:'永豐存款（台幣）', amount:0, currency:'TWD'},
+    {id:'a3', name:'永豐存款（日幣）', amount:5580, currency:'JPY'},
+    {id:'a4', name:'永豐存款（美金）', amount:0, currency:'USD'},
+    {id:'a5', name:'國泰世華存款', amount:39401, currency:'TWD'},
+    {id:'a6', name:'星展存款', amount:4361, currency:'TWD'},
+    {id:'a7', name:'郵局存款', amount:214, currency:'TWD'},
+    {id:'a8', name:'錢包現金', amount:2100, currency:'TWD'},
+    {id:'a9', name:'Line Pay Money', amount:40, currency:'TWD'},
+    {id:'a10', name:'Line Points', amount:456, currency:'TWD'},
+    {id:'a11', name:'手錶一卡通', amount:278, currency:'TWD'},
+    {id:'a12', name:'渣打存款', amount:30620, currency:'TWD'},
+  ],
+  expenses:[
+    {id:'e1', name:'台哥大電信費', amount:2321, note:'每月'},
+    {id:'e2', name:'中華寬頻電信費', amount:1607, note:'每月1號'},
+    {id:'e3', name:'水費', amount:500, note:'偶數月'},
+    {id:'e4', name:'電費', amount:1000, note:'奇數月'},
+    {id:'e5', name:'房屋貸款', amount:30620, note:'每月'},
+  ],
+  subs:[
+    {id:'s1', name:'勇者系列贊助訂閱', amount:80, currency:'TWD', cycle:'monthly', expires:null, note:'每月80'},
+    {id:'s2', name:'YOASOBI 會員費', amount:440, currency:'JPY', cycle:'monthly', extra:1.015, expires:null, note:'每月220日幣×2人'},
+    {id:'s3', name:'Ado 會費', amount:6600, currency:'JPY', cycle:'yearly', expires:'2026-05-06', note:'年費'},
+    {id:'s4', name:'tuki. 月人會費', amount:1100, currency:'JPY', cycle:'monthly', expires:null, note:'2025/9/9 起'},
+    {id:'s5', name:'Phantom Siita 會費', amount:6600, currency:'JPY', cycle:'yearly', expires:'2026-07-15', note:'年費'},
+    {id:'s6', name:'Babymonster（Weverse）', amount:25000, currency:'KRW', cycle:'yearly', expires:'2026-11-07', note:'年費'},
+    {id:'s7', name:'Babymonster（JP）', amount:6600, currency:'JPY', cycle:'yearly', expires:'2026-12-31', note:'年費'},
+    {id:'s8', name:'Zutomayo', amount:6600, currency:'JPY', cycle:'yearly', expires:'2027-01-22', note:'年費'},
+    {id:'s9', name:'Fruits Zipper', amount:10560, currency:'JPY', cycle:'yearly', expires:'2026-06-06', note:'年費'},
+    {id:'s10', name:'高嶺のなでしこ', amount:880, currency:'JPY', cycle:'monthly', expires:null, note:'550 FC + 330 ひめりmessege'},
+    {id:'s11', name:'Weverse Yui', amount:130, currency:'TWD', cycle:'monthly', expires:null, note:'優衣 DM'},
+    {id:'s12', name:'Openrec.tv Kawaii Lab', amount:550, currency:'JPY', cycle:'monthly', expires:null, note:''},
+  ],
+  cards:[
+    {id:'c1', name:'中信信用卡', billed:0, limit:600000, available:451214, note:'中信帳戶自動扣繳', debitDay:null, debitBank:'中信'},
+    {id:'c2', name:'國泰世華信用卡', billed:39401, limit:400000, available:359751, note:'國泰帳戶自動扣繳', debitDay:null, debitBank:'國泰世華'},
+    {id:'c3', name:'新光信用卡', billed:0, limit:0, available:0, note:'', debitDay:null, debitBank:''},
+    {id:'c4', name:'台新信用卡', billed:2861, limit:0, available:0, note:'中信帳戶自動扣繳', debitDay:null, debitBank:'中信'},
+    {id:'c5', name:'星展信用卡', billed:4361, limit:120000, available:114759, note:'星展帳戶自動扣繳', debitDay:null, debitBank:'星展'},
+    {id:'c6', name:'永豐信用卡（台幣）', billed:0, limit:0, available:0, note:'', debitDay:null, debitBank:''},
+    {id:'c7', name:'富邦信用卡', billed:0, limit:0, available:0, note:'富邦自動扣繳', debitDay:null, debitBank:'富邦'},
+  ],
+};
+
+let state = loadState();
+loadSyncCfg();
+window.addEventListener('load', ()=>{ if(_syncCfg) pullFromGist(); });
+let rates = {JPY:0.21, KRW:0.022, USD:31.5, _status:'cached', _time:null};
+
+// ============ Undo/Redo history ============
+const HISTORY_MAX = 50;
+let history = {
+  past: [],      // 過去的快照（最舊在前、最新在後）
+  future: [],    // redo 用的快照
+};
+let subSortField = null, subSortDir = 1;
+let cardSortField = null, cardSortDir = 1;
+
+function snapshot(){
+  // 取目前 state 的深拷貝
+  return JSON.parse(JSON.stringify(state));
+}
+
+function recordHistory(label){
+  // 在 state 即將改變之前呼叫，把當前狀態壓進 past
+  history.past.push({snap:snapshot(), label});
+  if(history.past.length > HISTORY_MAX) history.past.shift();
+  history.future = [];  // 新動作清空 redo
+}
+
+function undo(){
+  if(history.past.length === 0){
+    showToast('沒有可復原的動作', '↶', true);
+    return;
+  }
+  const item = history.past.pop();
+  history.future.push({snap:snapshot(), label:item.label});
+  state = item.snap;
+  saveState();
+  render();
+  showToast(`已復原：${item.label||'動作'}`, '↶');
+}
+
+function redo(){
+  if(history.future.length === 0){
+    showToast('沒有可反復原的動作', '↷', true);
+    return;
+  }
+  const item = history.future.pop();
+  history.past.push({snap:snapshot(), label:item.label});
+  state = item.snap;
+  saveState();
+  render();
+  showToast(`已反復原：${item.label||'動作'}`, '↷');
+}
+
+let toastTimer = null;
+function showToast(text, icon='↶', disabled=false){
+  const toast = document.getElementById('toast');
+  document.getElementById('toastText').textContent = text;
+  document.getElementById('toastIcon').textContent = icon;
+  toast.classList.toggle('disabled', disabled);
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>toast.classList.remove('show'), 1800);
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem('wei_finance_v1');
+    if(raw){
+      const parsed = JSON.parse(raw);
+      const s = Object.assign({},DEFAULT_DATA, parsed, {
+        settings:Object.assign({},DEFAULT_DATA.settings, parsed.settings||{})
+      });
+      // Migrate: ensure cards have debitDay/debitBank
+      s.cards = s.cards.map(c=>Object.assign({debitDay:null,debitBank:''},c));
+      // Migrate: ensure subs have startDate
+      s.subs = s.subs.map(sub=>Object.assign({startDate:null},sub));
+      return s;
+    }
+  }catch(e){console.warn('loadState fail',e);}
+  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+}
+function saveState(){
+  localStorage.setItem('wei_finance_v1', JSON.stringify(state));
+  schedulePush();
+}
+
+const fmt = n => {
+  if(n===null||n===undefined||isNaN(n))return '—';
+  const sign = n<0?'-':'';
+  const abs = Math.abs(Math.round(n));
+  return sign + abs.toLocaleString('en-US');
+};
+function toTWD(amount,currency){
+  if(currency==='TWD')return amount;
+  if(currency==='JPY')return amount * rates.JPY;
+  if(currency==='KRW')return amount * rates.KRW;
+  if(currency==='USD')return amount * rates.USD;
+  return amount;
+}
+
+function daysUntilNextCycle(){
+  const today = new Date();
+  const day = today.getDate();
+  const cycleDay = state.settings.cycleDay;
+  let next;
+  if(day >= cycleDay){
+    next = new Date(today.getFullYear(), today.getMonth()+1, cycleDay);
+  }else{
+    next = new Date(today.getFullYear(), today.getMonth(), cycleDay);
+  }
+  const diff = Math.ceil((next - today) / (1000*60*60*24));
+  return Math.max(diff, 1);
+}
+function cycleProgress(){
+  const today = new Date();
+  const day = today.getDate();
+  const cd = state.settings.cycleDay;
+  let cycleStart, cycleEnd;
+  if(day >= cd){
+    cycleStart = new Date(today.getFullYear(), today.getMonth(), cd);
+    cycleEnd = new Date(today.getFullYear(), today.getMonth()+1, cd);
+  }else{
+    cycleStart = new Date(today.getFullYear(), today.getMonth()-1, cd);
+    cycleEnd = new Date(today.getFullYear(), today.getMonth(), cd);
+  }
+  const total = cycleEnd - cycleStart;
+  const elapsed = today - cycleStart;
+  return Math.min(Math.max(elapsed/total, 0), 1);
+}
+
+function totalAssets(){
+  return state.assets.reduce((s,a)=>s + toTWD(a.amount||0, a.currency), 0);
+}
+function totalSubsMonthly(){
+  return state.subs.reduce((s,sub)=>{
+    let monthly = sub.amount;
+    if(sub.cycle==='yearly') monthly = sub.amount/12;
+    if(sub.extra) monthly *= sub.extra;
+    return s + toTWD(monthly, sub.currency);
+  },0);
+}
+function dailyFoodTotal(){ return state.settings.dailyFood * daysUntilNextCycle(); }
+function dailyTransportTotal(){ return state.settings.dailyTransport * daysUntilNextCycle(); }
+function totalFixedExpenses(){
+  const fixed = state.expenses.reduce((s,e)=>s+(e.amount||0), 0);
+  return fixed + dailyFoodTotal() + dailyTransportTotal() + totalSubsMonthly();
+}
+function totalCreditCards(){
+  return state.cards.reduce((s,c)=>{
+    const billed = c.billed||0;
+    const pending = Math.max((c.limit||0) - (c.available||0) - billed, 0);
+    return s + billed + pending;
+  },0);
+}
+function movableAssets(){ return totalAssets() - totalFixedExpenses() - totalCreditCards(); }
+function dailyBudget(){ return movableAssets() / daysUntilNextCycle(); }
+
+// ============ GitHub Gist Sync ============
+const SYNC_KEY = 'wei_sync_cfg';
+let _syncCfg = null;
+let _syncTimer = null;
+let _syncBusy = false;
+
+function loadSyncCfg(){
+  try{ const r=localStorage.getItem(SYNC_KEY); if(r) _syncCfg=JSON.parse(r); }catch(e){}
+}
+function saveSyncCfg(cfg){ _syncCfg=cfg; localStorage.setItem(SYNC_KEY,JSON.stringify(cfg)); }
+function clearSyncCfg(){ _syncCfg=null; localStorage.removeItem(SYNC_KEY); }
+
+function setSyncUI(status, label){
+  const dot=document.getElementById('syncDot');
+  const lbl=document.getElementById('syncLabel');
+  if(dot) dot.className='sync-dot '+status;
+  if(lbl) lbl.textContent=label||'☁ 同步';
+}
+
+function schedulePush(){
+  if(!_syncCfg) return;
+  clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(pushToGist, 800);
+}
+
+async function pushToGist(){
+  if(!_syncCfg||_syncBusy) return;
+  _syncBusy=true;
+  setSyncUI('syncing','同步中…');
+  try{
+    const res=await fetch(`https://api.github.com/gists/${_syncCfg.gistId}`,{
+      method:'PATCH',
+      headers:{Authorization:`token ${_syncCfg.token}`,'Content-Type':'application/json',Accept:'application/vnd.github.v3+json'},
+      body:JSON.stringify({files:{'wei_finance_data.json':{content:JSON.stringify(state,null,2)}}})
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const t=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    setSyncUI('ok','☁ '+t);
+  }catch(e){ setSyncUI('error','同步失敗'); console.warn('Gist push',e); }
+  _syncBusy=false;
+}
+
+async function pullFromGist(){
+  if(!_syncCfg) return;
+  setSyncUI('syncing','載入中…');
+  try{
+    const res=await fetch(`https://api.github.com/gists/${_syncCfg.gistId}`,{
+      headers:{Authorization:`token ${_syncCfg.token}`,Accept:'application/vnd.github.v3+json'}
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const file=data.files['wei_finance_data.json'];
+    if(file&&file.content){
+      const remote=JSON.parse(file.content);
+      Object.assign(state,remote);
+      localStorage.setItem('wei_finance_v1',JSON.stringify(state));
+      render();
+    }
+    const t=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+    setSyncUI('ok','☁ '+t);
+  }catch(e){ setSyncUI('error','同步失敗'); console.warn('Gist pull',e); }
+}
+
+function openSyncModal(){
+  const modal=document.getElementById('syncModal');
+  const tokenInput=document.getElementById('syncToken');
+  const gistInput=document.getElementById('syncGistId');
+  const discBtn=document.getElementById('syncDisconnectBtn');
+  const msg=document.getElementById('syncModalMsg');
+  if(_syncCfg){
+    tokenInput.value=_syncCfg.token;
+    gistInput.value=_syncCfg.gistId;
+    discBtn.style.display='';
+  } else {
+    tokenInput.value=''; gistInput.value='';
+    discBtn.style.display='none';
+  }
+  msg.textContent=''; msg.className='sync-status-msg';
+  modal.style.display='flex';
+  setTimeout(()=>tokenInput.focus(),50);
+}
+
+function closeSyncModal(){ document.getElementById('syncModal').style.display='none'; }
+
+async function connectGist(){
+  const token=document.getElementById('syncToken').value.trim();
+  const gistId=document.getElementById('syncGistId').value.trim();
+  const msg=document.getElementById('syncModalMsg');
+  if(!token||!gistId){ msg.className='sync-status-msg error'; msg.textContent='請填寫 Token 和 Gist ID'; return; }
+  msg.className='sync-status-msg syncing'; msg.textContent='連線中…';
+  try{
+    const res=await fetch(`https://api.github.com/gists/${gistId}`,{
+      headers:{Authorization:`token ${token}`,Accept:'application/vnd.github.v3+json'}
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const file=data.files['wei_finance_data.json'];
+    saveSyncCfg({token,gistId});
+    if(file&&file.content&&file.content.trim()!=='{}'&&file.content.trim()!==''){
+      const remote=JSON.parse(file.content);
+      Object.assign(state,remote);
+      localStorage.setItem('wei_finance_v1',JSON.stringify(state));
+      render();
+      msg.className='sync-status-msg ok'; msg.textContent='✓ 連線成功，已載入雲端數據';
+    } else {
+      await pushToGist();
+      msg.className='sync-status-msg ok'; msg.textContent='✓ 連線成功，已上傳本機數據';
+    }
+    document.getElementById('syncDisconnectBtn').style.display='';
+    setSyncUI('ok','☁ 已連線');
+    setTimeout(closeSyncModal,1500);
+  }catch(e){
+    msg.className='sync-status-msg error';
+    msg.textContent='連線失敗：'+e.message+'（請確認 Token 有 gist 權限且 Gist ID 正確）';
+  }
+}
+
+function disconnectGist(){
+  if(!confirm('確定要中斷同步？本機數據不受影響。')) return;
+  clearSyncCfg();
+  setSyncUI('idle','☁ 同步');
+  closeSyncModal();
+}
+
+// =========== Render ===========
+function render(){
+  renderDashboard();
+  renderDebitReminders();
+  renderAssetsView();
+  renderExpensesView();
+  renderSubsView();
+  renderCardsView();
+  // Edit lists
+  renderEditBanks();
+  renderEditExpenses();
+  renderEditSubs();
+  // settings sync
+  const cd = document.getElementById('cycleDay');
+  if(cd){
+    cd.value = state.settings.cycleDay;
+    document.getElementById('dailyFood').value = state.settings.dailyFood;
+    document.getElementById('dailyTransport').value = state.settings.dailyTransport;
+  }
+}
+
+function renderDashboard(){
+  const today = new Date();
+  document.getElementById('todayLabel').textContent =
+    today.toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',day:'2-digit',weekday:'short'}).toUpperCase();
+
+  document.getElementById('rJPY').textContent = rates.JPY.toFixed(4);
+  document.getElementById('rKRW').textContent = rates.KRW.toFixed(5);
+  document.getElementById('rUSD').textContent = rates.USD.toFixed(3);
+  const rs = document.getElementById('rateStatus');
+  rs.textContent = rates._status==='live'?`即時匯率 · ${rates._time}`:'使用快取匯率';
+  rs.className = 'rate-status ' + (rates._status==='live'?'live':'cached');
+
+  document.getElementById('dailyBudget').textContent = fmt(dailyBudget());
+  document.getElementById('daysLeft').textContent = daysUntilNextCycle();
+  document.getElementById('cycleProgress').style.width = (cycleProgress()*100).toFixed(1)+'%';
+
+  const mov = movableAssets();
+  const movEl = document.getElementById('movableValue');
+  movEl.innerHTML = `<span class="currency">NT$</span>${fmt(mov)}`;
+  movEl.className = 'hero-value ' + (mov<0?'negative':'positive');
+  document.getElementById('movableNote').textContent = mov<0?'⚠ 已超出本月預算':'本週期可動用';
+
+  document.getElementById('totalAssetValue').innerHTML = `<span class="currency">NT$</span>${fmt(totalAssets())}`;
+  document.getElementById('totalAssetNote').textContent = `${state.assets.length} 個帳戶`;
+
+  document.getElementById('fixedTotal').textContent = fmt(totalFixedExpenses());
+  document.getElementById('fixedNote').textContent = `含餐費 ${fmt(dailyFoodTotal())} · 訂閱 ${fmt(totalSubsMonthly())}`;
+
+  document.getElementById('ccTotal').textContent = fmt(totalCreditCards());
+  document.getElementById('ccNote').textContent = `${state.cards.filter(c=>(c.billed||0)>0||((c.limit||0)-(c.available||0))>0).length} 張卡有額度使用`;
+}
+
+// ============ VIEW renderers ============
+function renderAssetsView(){
+  const list = document.getElementById('assetsList');
+  list.innerHTML = '';
+  state.assets.forEach(a=>{
+    const twd = toTWD(a.amount||0, a.currency);
+    const div = document.createElement('div');
+    div.className = 'row';
+    div.innerHTML = `
+      <div>
+        <div class="row-label">${a.name}</div>
+        <span class="row-meta">${a.currency}${a.currency!=='TWD'?` · 原幣 ${fmt(a.amount)}`:''}</span>
+      </div>
+      <div class="row-amount">NT$ ${fmt(twd)}</div>
+    `;
+    list.appendChild(div);
+  });
+  document.getElementById('assetsCount').textContent = state.assets.length;
+  document.getElementById('assetsSum').textContent = `合計 NT$ ${fmt(totalAssets())}`;
+}
+
+function renderExpensesView(){
+  const list = document.getElementById('expensesList');
+  list.innerHTML = '';
+  const auto = [
+    {name:'餐費（每日基本×剩餘天數）', amount:dailyFoodTotal(), note:`NT$ ${state.settings.dailyFood} × ${daysUntilNextCycle()} 天`},
+    {name:'交通費（每日基本×剩餘天數）', amount:dailyTransportTotal(), note:`NT$ ${state.settings.dailyTransport} × ${daysUntilNextCycle()} 天`},
+  ];
+  auto.forEach(a=>{
+    const div = document.createElement('div');
+    div.className = 'row';
+    div.innerHTML = `
+      <div>
+        <div class="row-label" style="color:var(--accent);">⚙ ${a.name}</div>
+        <span class="row-meta">${a.note} · 由設定計算</span>
+      </div>
+      <div class="row-amount accent">NT$ ${fmt(a.amount)}</div>
+    `;
+    list.appendChild(div);
+  });
+  state.expenses.forEach(e=>{
+    const div = document.createElement('div');
+    div.className = 'row';
+    div.innerHTML = `
+      <div>
+        <div class="row-label">${e.name}</div>
+        ${e.note?`<span class="row-meta">${e.note}</span>`:''}
+      </div>
+      <div class="row-amount">NT$ ${fmt(e.amount||0)}</div>
+    `;
+    list.appendChild(div);
+  });
+  document.getElementById('expCount').textContent = state.expenses.length + 2;
+  document.getElementById('expSum').textContent = `合計 NT$ ${fmt(totalFixedExpenses() - totalSubsMonthly())} /月`;
+}
+
+function renderSubsView(){
+  const list = document.getElementById('subsList');
+  list.innerHTML = '';
+  // Sort bar
+  let sb = document.getElementById('subSortBar');
+  if(!sb){ sb = document.createElement('div'); sb.id='subSortBar'; sb.className='sort-bar'; list.parentElement.insertBefore(sb,list); }
+  sb.innerHTML = '<span class="sort-bar-label">排序</span>' +
+    ['name:名稱','startDate:開始日','expires:到期日','amount:金額'].map(f=>{
+      const [k,l]=f.split(':');
+      const cls = subSortField===k ? (subSortDir===1?'active-asc':'active-desc') : '';
+      return `<button class="sort-btn ${cls}" onclick="sortSubs('${k}')">${l}</button>`;
+    }).join('');
+  state.subs.forEach(s=>{
+    let monthly = s.amount;
+    if(s.cycle==='yearly') monthly = s.amount/12;
+    if(s.extra) monthly *= s.extra;
+    const twd = toTWD(monthly, s.currency);
+
+    let expireText = '';
+    let expireClass = '';
+    let cardClass = '';
+    let nameClass = '';
+    let dotClass = '';
+    if(s.expires){
+      const exp = new Date(s.expires);
+      const days = Math.ceil((exp - new Date())/(1000*60*60*24));
+      if(days < 0){
+        expireText = `⚠ 已到期 ${Math.abs(days)} 天`;
+        expireClass = 'expired';
+        cardClass = 'expired';
+        nameClass = 'expired-name';
+        dotClass = 'expired-dot';
+      }else if(days <= 30){
+        expireText = `⚠ ${days} 天後到期 (${s.expires})`;
+        expireClass = 'warn';
+        nameClass = 'warn';
+        dotClass = 'warn';
+      }else{
+        expireText = `${days} 天後到期 (${s.expires})`;
+      }
+    }else{
+      expireText = s.cycle==='monthly'?'每月訂閱':'每年訂閱';
+    }
+
+    const div = document.createElement('div');
+    div.className = 'sub-card ' + cardClass;
+    div.innerHTML = `
+      <div class="sub-name ${nameClass}">
+        <div class="sub-name-left">
+          ${dotClass?`<span class="sub-dot ${dotClass}"></span>`:''}
+          <span class="sub-name-text">${s.name}</span>
+        </div>
+        <span class="currency-tag">${s.currency}</span>
+      </div>
+      <div class="sub-price">
+        ${fmt(s.amount)} ${s.currency} / ${s.cycle==='yearly'?'年':'月'}
+        ${s.currency!=='TWD'?` · 月均 NT$ ${fmt(twd)}`:''}
+      </div>
+      ${s.note?`<div class="sub-meta">${s.note}</div>`:''}
+      <div class="sub-expires ${expireClass} editable" title="雙擊可編輯到期日" ondblclick="openSubExpiryEdit('${s.id}', this)">${expireText}</div>
+    `;
+    div.setAttribute('data-drag-id', s.id);
+    div.setAttribute('draggable','true');
+    setupListDrag(div, s.id, state.subs, 'subs');
+    list.appendChild(div);
+  });
+  document.getElementById('subCount').textContent = state.subs.length;
+  document.getElementById('subSum').textContent = `合計 NT$ ${fmt(totalSubsMonthly())} /月`;
+}
+
+// ============ Inline expiry date editing ============
+function openSubExpiryEdit(id, el){
+  const s = state.subs.find(x=>x.id===id);
+  if(!s) return;
+  const currentVal = s.expires || '';
+  el.innerHTML = `
+    <input class="sub-expires-input" type="date" value="${currentVal}" id="subExpInput_${id}">
+    <div class="sub-expires-btns">
+      <button class="sub-expires-btn confirm" onclick="saveSubExpiry('${id}')">確認</button>
+      <button class="sub-expires-btn cancel" onclick="render()">取消</button>
+    </div>
+  `;
+  el.className = 'sub-expires editing';
+  const input = document.getElementById('subExpInput_'+id);
+  if(input){
+    input.focus();
+    input.addEventListener('keydown', e=>{
+      if(e.key === 'Enter'){ e.preventDefault(); saveSubExpiry(id); }
+      if(e.key === 'Escape'){ e.preventDefault(); render(); }
+    });
+  }
+}
+
+function saveSubExpiry(id){
+  const input = document.getElementById('subExpInput_'+id);
+  if(!input) return;
+  const s = state.subs.find(x=>x.id===id);
+  if(!s) return;
+  const newVal = input.value || null;
+  if(s.expires === newVal){ render(); return; }
+  recordHistory(`更新 ${s.name} 到期日`);
+  s.expires = newVal;
+  saveState(); render();
+  showToast(`已更新到期日：${s.name}`, '✓');
+}
+
+function renderCardsView(){
+  const list = document.getElementById('cardsList');
+  list.innerHTML = '';
+  // Sort bar
+  let sb = document.getElementById('cardSortBar');
+  if(!sb){ sb = document.createElement('div'); sb.id='cardSortBar'; sb.className='sort-bar'; list.parentElement.insertBefore(sb,list); }
+  sb.innerHTML = '<span class="sort-bar-label">排序</span>' +
+    ['name:名稱','billed:已出帳','pending:未出帳','limit:額度'].map(f=>{
+      const [k,l]=f.split(':');
+      const cls = cardSortField===k ? (cardSortDir===1?'active-asc':'active-desc') : '';
+      return `<button class="sort-btn ${cls}" onclick="sortCards('${k}')">${l}</button>`;
+    }).join('');
+  state.cards.forEach(c=>{
+    const pending = Math.max((c.limit||0) - (c.available||0) - (c.billed||0), 0);
+    const div = document.createElement('div');
+    div.className = 'cc-row';
+    div.setAttribute('data-drag-id', c.id);
+    div.setAttribute('draggable','true');
+    div.innerHTML = `
+      <div>
+        <div class="cc-name">${c.name}</div>
+        ${c.note?`<span class="row-meta">${c.note}</span>`:''}
+      </div>
+      <div class="cc-stack">
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ ${fmt(c.billed||0)}</span></div>
+        <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ ${fmt(pending)}</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ ${fmt(c.available||0)} / ${fmt(c.limit||0)}</span></div>
+      </div>
+    `;
+    setupListDrag(div, c.id, state.cards, 'cards');
+    list.appendChild(div);
+  });
+  document.getElementById('ccCount').textContent = state.cards.length;
+  document.getElementById('ccSum').textContent = `合計待扣 NT$ ${fmt(totalCreditCards())}`;
+}
+
+// ============ EDIT renderers ============
+
+// 銀行關鍵字清單（越長越精確的放前面，避免「國泰」被「泰」誤匹配）
+const BANK_KEYWORDS = [
+  '中國信託','中信','國泰世華','國泰','星展','永豐','富邦','渣打','郵局','新光','台新','玉山','彰銀','彰化銀行','台銀','合庫','第一銀行','華南','土銀'
+];
+
+function getBankKey(name){
+  for(const kw of BANK_KEYWORDS){
+    if(name.includes(kw)) return kw;
+  }
+  return null;
+}
+
+function renderEditBanks(){
+  const banksContainer = document.getElementById('editBanksList');
+  const otherContainer = document.getElementById('editOtherAssets');
+  banksContainer.innerHTML = '';
+  otherContainer.innerHTML = '';
+
+  // 收集所有出現的銀行
+  const bankMap = new Map(); // bankKey → {assets:[], cards:[]}
+  const otherAssets = [];
+
+  state.assets.forEach(a => {
+    const key = getBankKey(a.name);
+    if(key){
+      if(!bankMap.has(key)) bankMap.set(key, {assets:[], cards:[]});
+      bankMap.get(key).assets.push(a);
+    } else {
+      otherAssets.push(a);
+    }
+  });
+
+  state.cards.forEach(c => {
+    const key = getBankKey(c.name);
+    if(key){
+      if(!bankMap.has(key)) bankMap.set(key, {assets:[], cards:[]});
+      bankMap.get(key).cards.push(c);
+    }
+    // 沒有對應 key 的信用卡（很少見）歸入最後的「孤立卡」
+  });
+
+  // 依照 BANK_KEYWORDS 順序排列（有資料的才顯示）
+  const orderedKeys = [];
+  BANK_KEYWORDS.forEach(kw => { if(bankMap.has(kw)) orderedKeys.push(kw); });
+
+  // 維護使用者自訂銀行排序
+  if(!state.bankOrder) state.bankOrder = [...orderedKeys];
+  orderedKeys.forEach(k => { if(!state.bankOrder.includes(k)) state.bankOrder.push(k); });
+  state.bankOrder = state.bankOrder.filter(k => bankMap.has(k));
+
+  state.bankOrder.forEach(key => {
+    const group = bankMap.get(key);
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'bank-group';
+    groupDiv.setAttribute('data-tab-group', '');
+    groupDiv.setAttribute('draggable', 'true');
+
+    // 計算這個銀行的合計台幣資產
+    const assetTotal = group.assets.reduce((s,a) => s + toTWD(a.amount||0, a.currency), 0);
+    const cardTotal  = group.cards.reduce((s,c) => {
+      return s + (c.billed||0) + Math.max((c.limit||0)-(c.available||0)-(c.billed||0), 0);
+    }, 0);
+
+    // header
+    const header = document.createElement('div');
+    header.className = 'bank-header';
+    header.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="drag-handle" title="拖移重新排序">⠿</span>
+        <span class="bank-header-name">${key}</span>
+      </div>
+      <span class="bank-header-total">存款 NT$ ${fmt(assetTotal)}${cardTotal>0?' · 卡片待扣 NT$ '+fmt(cardTotal):''}</span>
+    `;
+    groupDiv.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'bank-body';
+
+    // 存款列
+    group.assets.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'bank-row';
+      row.innerHTML = `
+        <span class="bank-row-type deposit">存款</span>
+        <span class="bank-row-label">${a.name}${a.currency!=='TWD'?` <span style="color:var(--ink-faint);font-size:11px;">${a.currency}</span>`:''}</span>
+        <div class="bank-row-input">
+          <input type="number" value="${a.amount||0}" onchange="updateAsset('${a.id}','amount',this.value)" step="any">
+        </div>
+        <button class="row-action" onclick="removeAsset('${a.id}')">移除</button>
+      `;
+      body.appendChild(row);
+    });
+
+    // 信用卡列
+    group.cards.forEach(c => {
+      const pending = Math.max((c.limit||0)-(c.available||0)-(c.billed||0), 0);
+      const row = document.createElement('div');
+      row.className = 'bank-row';
+      row.innerHTML = `
+        <span class="bank-row-type card">信用卡</span>
+        <span class="bank-row-label inline-field" title="雙擊編輯卡名" ondblclick="openCardFieldEdit('${c.id}','name',this)">${c.name}${c.note?`<br><span class="inline-field" style="color:var(--ink-faint);font-size:10px;" title="雙擊編輯備註" ondblclick="openCardFieldEdit('${c.id}','note',this.parentElement)">${c.note}</span>`:''}</span>
+        <div class="bank-row-subinputs">
+          <div class="bank-row-subline"><span class="cc-tag">已出帳</span><input type="number" value="${c.billed||0}" onchange="updateCard('${c.id}','billed',this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">額度</span><input type="number" value="${c.limit||0}" onchange="updateCard('${c.id}','limit',this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">可用</span><input type="number" value="${c.available||0}" onchange="updateCard('${c.id}','available',this.value)" step="any"></div>
+          <div class="bank-row-subline"><span class="cc-tag">未出帳</span><span class="bank-row-pending">NT$ ${fmt(pending)}</span></div>
+          <div class="bank-row-subline"><span class="cc-tag">扣繳日</span><input type="number" min="1" max="31" placeholder="日" value="${c.debitDay||''}" onchange="updateCard('${c.id}','debitDay',this.value)" style="width:58px;"></div>
+          <div class="bank-row-subline"><span class="cc-tag">扣帳銀行</span><input type="text" placeholder="例：中信" value="${c.debitBank||''}" onchange="updateCard('${c.id}','debitBank',this.value)" style="width:100px;"></div>
+        </div>
+        <button class="row-action" onclick="removeCard('${c.id}')">移除</button>
+      `;
+      body.appendChild(row);
+    });
+
+    groupDiv.appendChild(body);
+    setupBankGroupDrag(groupDiv, key);
+    banksContainer.appendChild(groupDiv);
+  });
+
+  // 其他帳戶（Line Pay、現金等）
+  if(otherAssets.length > 0){
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'other-section-title';
+    titleDiv.textContent = '其他帳戶';
+    otherContainer.appendChild(titleDiv);
+
+    otherAssets.forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'row editable';
+      div.setAttribute('data-tab-group', '');
+      div.innerHTML = `
+        <div>
+          <div class="row-label">${a.name}</div>
+          <span class="row-meta">${a.currency}</span>
+        </div>
+        <div class="row-amount"><input type="number" value="${a.amount||0}" onchange="updateAsset('${a.id}','amount',this.value)" step="any"></div>
+        <button class="row-action" onclick="removeAsset('${a.id}')">移除</button>
+      `;
+      otherContainer.appendChild(div);
+    });
+  }
+}
+
+function renderEditExpenses(){
+  const list = document.getElementById('editExpensesList');
+  list.innerHTML = '';
+  state.expenses.forEach(e=>{
+    const div = document.createElement('div');
+    div.className = 'row editable';
+    div.setAttribute('data-tab-group','');
+    div.innerHTML = `
+      <div>
+        <div class="row-label">${e.name}</div>
+        ${e.note?`<span class="row-meta">${e.note}</span>`:''}
+      </div>
+      <div class="row-amount"><input type="number" value="${e.amount||0}" onchange="updateExpense('${e.id}','amount',this.value)" step="any"></div>
+      <button class="row-action" onclick="removeExpense('${e.id}')">移除</button>
+    `;
+    list.appendChild(div);
+  });
+}
+function renderEditSubs(){
+  const list = document.getElementById('editSubsList');
+  list.innerHTML = '';
+  state.subs.forEach(s=>{
+    const div = document.createElement('div');
+    div.className = 'row editable has-handle';
+    div.setAttribute('data-tab-group','');
+    div.setAttribute('data-drag-id', s.id);
+    div.setAttribute('draggable','true');
+    const meta = [s.note, s.startDate?('開始 '+s.startDate):null, s.expires?('到期 '+s.expires):null].filter(Boolean).join(' · ');
+    div.innerHTML = `
+      <span class="drag-handle" title="拖移排序">⠿</span>
+      <div style="min-width:0;">
+        <div class="row-label inline-field" title="雙擊編輯名稱" ondblclick="openSubFieldEdit('${s.id}','name',this)">${s.name} <span style="color:var(--ink-soft);font-size:12px;font-weight:400;">· ${s.currency} ${s.cycle==='yearly'?'/年':'/月'}</span></div>
+        <span class="row-meta inline-field" title="雙擊編輯備註" ondblclick="openSubFieldEdit('${s.id}','note',this)">${meta||'…'}</span>
+      </div>
+      <div class="row-amount"><input type="number" value="${s.amount||0}" onchange="updateSub('${s.id}','amount',this.value)" step="any"></div>
+      <button class="row-action" onclick="removeSub('${s.id}')">移除</button>
+    `;
+    setupListDrag(div, s.id, state.subs, 'subs');
+    list.appendChild(div);
+  });
+}
+
+// showAddForm / hideAddForms
+function showAddForm(type){
+  hideAddForms();
+  const formId = type === 'asset' ? 'addAssetForm' : 'addCardForm';
+  const form = document.getElementById(formId);
+  if(form){
+    form.style.display = '';
+    const first = form.querySelector('input, select');
+    if(first){ first.focus(); }
+    form.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+}
+function hideAddForms(){
+  ['addAssetForm','addCardForm'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+}
+
+// ============ Actions ============
+function updateAsset(id,field,val){
+  const a = state.assets.find(x=>x.id===id);
+  if(a){
+    const newVal = parseFloat(val)||0;
+    if(a[field] === newVal) return;
+    recordHistory(`修改 ${a.name}`);
+    a[field] = newVal;
+    saveState(); render();
+  }
+}
+function removeAsset(id){
+  if(!confirm('確定移除此帳戶？'))return;
+  const a = state.assets.find(x=>x.id===id);
+  recordHistory(`移除 ${a?a.name:'帳戶'}`);
+  state.assets = state.assets.filter(x=>x.id!==id);
+  saveState(); render();
+}
+function addAsset(){
+  const name = document.getElementById('newAssetName').value.trim();
+  if(!name){alert('請輸入名稱');return;}
+  const amount = parseFloat(document.getElementById('newAssetAmount').value)||0;
+  const currency = document.getElementById('newAssetCurrency').value;
+  recordHistory(`新增 ${name}`);
+  state.assets.push({id:'a'+Date.now(), name, amount, currency});
+  document.getElementById('newAssetName').value='';
+  document.getElementById('newAssetAmount').value='';
+  hideAddForms();
+  saveState(); render();
+}
+function updateExpense(id,field,val){
+  const e = state.expenses.find(x=>x.id===id);
+  if(e){
+    const newVal = parseFloat(val)||0;
+    if(e[field] === newVal) return;
+    recordHistory(`修改 ${e.name}`);
+    e[field] = newVal;
+    saveState(); render();
+  }
+}
+function removeExpense(id){
+  if(!confirm('確定移除？'))return;
+  const e = state.expenses.find(x=>x.id===id);
+  recordHistory(`移除 ${e?e.name:'開銷'}`);
+  state.expenses = state.expenses.filter(x=>x.id!==id);
+  saveState(); render();
+}
+function addExpense(){
+  const name = document.getElementById('newExpName').value.trim();
+  if(!name){alert('請輸入名稱');return;}
+  const amount = parseFloat(document.getElementById('newExpAmount').value)||0;
+  const note = document.getElementById('newExpNote').value.trim();
+  recordHistory(`新增 ${name}`);
+  state.expenses.push({id:'e'+Date.now(), name, amount, note});
+  document.getElementById('newExpName').value='';
+  document.getElementById('newExpAmount').value='';
+  document.getElementById('newExpNote').value='';
+  saveState(); render();
+}
+function updateSub(id,field,val){
+  const s = state.subs.find(x=>x.id===id);
+  if(s){
+    const newVal = parseFloat(val)||0;
+    if(s[field] === newVal) return;
+    recordHistory(`修改 ${s.name}`);
+    s[field] = newVal;
+    saveState(); render();
+  }
+}
+function removeSub(id){
+  if(!confirm('確定移除此訂閱？'))return;
+  const s = state.subs.find(x=>x.id===id);
+  recordHistory(`移除 ${s?s.name:'訂閱'}`);
+  state.subs = state.subs.filter(x=>x.id!==id);
+  saveState(); render();
+}
+function addSub(){
+  const name = document.getElementById('newSubName').value.trim();
+  if(!name){alert('請輸入名稱');return;}
+  const amount = parseFloat(document.getElementById('newSubAmount').value)||0;
+  const currency = document.getElementById('newSubCurrency').value;
+  const cycle = document.getElementById('newSubCycle').value;
+  const expires = document.getElementById('newSubExpires').value||null;
+  const startDate = document.getElementById('newSubStartDate').value||null;
+  const note = document.getElementById('newSubNote').value.trim();
+  recordHistory(`新增 ${name}`);
+  state.subs.push({id:'s'+Date.now(), name, amount, currency, cycle, expires, startDate, note});
+  ['newSubName','newSubAmount','newSubExpires','newSubStartDate','newSubNote'].forEach(i=>document.getElementById(i).value='');
+  saveState(); render();
+}
+function updateCard(id,field,val){
+  const c = state.cards.find(x=>x.id===id);
+  if(c){
+    let newVal;
+    if(['note','debitBank','name'].includes(field)) newVal = (val||'').trim()||null;
+    else if(field==='debitDay') newVal = (parseInt(val)>=1&&parseInt(val)<=31)?parseInt(val):null;
+    else newVal = parseFloat(val)||0;
+    if(c[field] === newVal) return;
+    recordHistory(`修改 ${c.name}`);
+    c[field] = newVal;
+    saveState(); render();
+  }
+}
+function removeCard(id){
+  if(!confirm('確定移除？'))return;
+  const c = state.cards.find(x=>x.id===id);
+  recordHistory(`移除 ${c?c.name:'信用卡'}`);
+  state.cards = state.cards.filter(x=>x.id!==id);
+  saveState(); render();
+}
+function addCard(){
+  const name = document.getElementById('newCardName').value.trim();
+  if(!name){alert('請輸入名稱');return;}
+  const billed = parseFloat(document.getElementById('newCardBilled').value)||0;
+  const limit = parseFloat(document.getElementById('newCardLimit').value)||0;
+  const available = parseFloat(document.getElementById('newCardAvailable').value)||0;
+  const note = document.getElementById('newCardNote').value.trim();
+  const debitDay = parseInt(document.getElementById('newCardDebitDay').value)||null;
+  const debitBank = document.getElementById('newCardDebitBank').value.trim()||null;
+  recordHistory(`新增 ${name}`);
+  state.cards.push({id:'c'+Date.now(), name, billed, limit, available, note, debitDay, debitBank});
+  ['newCardName','newCardBilled','newCardLimit','newCardAvailable','newCardNote','newCardDebitDay','newCardDebitBank'].forEach(i=>document.getElementById(i).value='');
+  hideAddForms();
+  saveState(); render();
+}
+
+function updateCycleDay(){
+  const newVal = parseInt(document.getElementById('cycleDay').value)||25;
+  if(state.settings.cycleDay === newVal) return;
+  recordHistory('修改結算日');
+  state.settings.cycleDay = newVal;
+  saveState(); render();
+}
+function updateDailyFood(){
+  const newVal = parseFloat(document.getElementById('dailyFood').value)||0;
+  if(state.settings.dailyFood === newVal) return;
+  recordHistory('修改每日餐費');
+  state.settings.dailyFood = newVal;
+  saveState(); render();
+}
+function updateDailyTransport(){
+  const newVal = parseFloat(document.getElementById('dailyTransport').value)||0;
+  if(state.settings.dailyTransport === newVal) return;
+  recordHistory('修改每日交通費');
+  state.settings.dailyTransport = newVal;
+  saveState(); render();
+}
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `wei_finance_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(ev){
+  const f = ev.target.files[0];
+  if(!f)return;
+  const r = new FileReader();
+  r.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!confirm('確定要覆蓋目前資料？'))return;
+      state = Object.assign({},DEFAULT_DATA,data,{settings:Object.assign({},DEFAULT_DATA.settings,data.settings||{})});
+      saveState(); render();
+      alert('已匯入');
+    }catch(err){alert('檔案格式錯誤');}
+  };
+  r.readAsText(f);
+}
+function resetAll(){
+  if(!confirm('確定重置所有資料？此動作不可復原！'))return;
+  if(!confirm('真的確定？建議先匯出備份！'))return;
+  localStorage.removeItem('wei_finance_v1');
+  state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  render();
+}
+
+// ============ Drag & Drop ============
+let _dragId = null, _dragType = null;
+function setupListDrag(el, id, arr, type){
+  el.addEventListener('dragstart', e=>{
+    _dragId = id; _dragType = type;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(()=>el.classList.add('dragging'), 0);
+  });
+  el.addEventListener('dragend', ()=>{
+    el.classList.remove('dragging');
+    document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
+  });
+  el.addEventListener('dragover', e=>{
+    if(_dragType !== type) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
+    el.classList.add('drag-over');
+  });
+  el.addEventListener('dragleave', e=>{
+    if(!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
+  });
+  el.addEventListener('drop', e=>{
+    e.preventDefault(); el.classList.remove('drag-over');
+    if(!_dragId || _dragId===id || _dragType!==type) return;
+    recordHistory(type==='subs'?'重新排序訂閱':'重新排序信用卡');
+    const fi = arr.findIndex(x=>x.id===_dragId), ti = arr.findIndex(x=>x.id===id);
+    if(fi>=0 && ti>=0){ const [item]=arr.splice(fi,1); arr.splice(ti,0,item); }
+    _dragId=null; _dragType=null;
+    saveState(); render();
+    showToast('順序已更新','↕');
+  });
+}
+
+// ============ Sort ============
+function sortSubs(field){
+  if(subSortField===field){ subSortDir*=-1; } else { subSortField=field; subSortDir=1; }
+  recordHistory('排序訂閱');
+  state.subs.sort((a,b)=>{
+    if(field==='name') return subSortDir*a.name.localeCompare(b.name,'zh-Hant');
+    if(field==='startDate'){ const da=a.startDate?new Date(a.startDate):new Date('9999-12-31'); const db=b.startDate?new Date(b.startDate):new Date('9999-12-31'); return subSortDir*(da-db); }
+    if(field==='expires'){ const da=a.expires?new Date(a.expires):new Date('9999-12-31'); const db=b.expires?new Date(b.expires):new Date('9999-12-31'); return subSortDir*(da-db); }
+    if(field==='amount'){ const ma=toTWD(a.cycle==='yearly'?a.amount/12:a.amount,a.currency); const mb=toTWD(b.cycle==='yearly'?b.amount/12:b.amount,b.currency); return subSortDir*(ma-mb); }
+    return 0;
+  });
+  saveState(); render();
+}
+function sortCards(field){
+  if(cardSortField===field){ cardSortDir*=-1; } else { cardSortField=field; cardSortDir=1; }
+  recordHistory('排序信用卡');
+  state.cards.sort((a,b)=>{
+    if(field==='name') return cardSortDir*a.name.localeCompare(b.name,'zh-Hant');
+    const pa=Math.max((a.limit||0)-(a.available||0)-(a.billed||0),0);
+    const pb=Math.max((b.limit||0)-(b.available||0)-(b.billed||0),0);
+    if(field==='billed') return cardSortDir*((b.billed||0)-(a.billed||0));
+    if(field==='pending') return cardSortDir*(pb-pa);
+    if(field==='limit') return cardSortDir*((b.limit||0)-(a.limit||0));
+    return 0;
+  });
+  saveState(); render();
+}
+
+// ============ Inline field editing ============
+function openSubFieldEdit(id, field, el){
+  const s = state.subs.find(x=>x.id===id); if(!s) return;
+  const val = (field==='name'?s.name:(s.note||''));
+  const inp = document.createElement('input');
+  inp.type='text'; inp.className='inline-edit-input'+(field==='note'?' sm':'');
+  inp.value=val; inp.placeholder=field==='name'?'訂閱名稱':'備註';
+  const suffix = field==='name' ? el.querySelector('span') : null;
+  el.innerHTML=''; el.appendChild(inp);
+  if(suffix) el.appendChild(suffix);
+  inp.focus(); inp.select();
+  const save=()=>{
+    const nv=inp.value.trim();
+    if(!nv&&field==='name'){render();return;}
+    const store = nv||null;
+    if(s[field]!==store){ recordHistory('修改 '+s.name); s[field]=store; saveState(); }
+    render();
+  };
+  inp.addEventListener('blur',save);
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();inp.removeEventListener('blur',save);save();}
+    if(e.key==='Escape'){e.preventDefault();inp.removeEventListener('blur',save);render();}
+  });
+}
+function openCardFieldEdit(id, field, el){
+  const c = state.cards.find(x=>x.id===id); if(!c) return;
+  const val = (c[field]||'');
+  const inp = document.createElement('input');
+  inp.type='text'; inp.className='inline-edit-input sm';
+  inp.value=val; inp.placeholder=field==='name'?'卡片名稱':'備註';
+  el.innerHTML=''; el.appendChild(inp);
+  inp.focus(); inp.select();
+  const save=()=>{
+    const nv=inp.value.trim();
+    if(!nv&&field==='name'){render();return;}
+    const store=nv||null;
+    if(c[field]!==store){ recordHistory('修改 '+c.name); c[field]=store; saveState(); }
+    render();
+  };
+  inp.addEventListener('blur',save);
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();inp.removeEventListener('blur',save);save();}
+    if(e.key==='Escape'){e.preventDefault();inp.removeEventListener('blur',save);render();}
+  });
+}
+
+// ============ Debit Reminders ============
+function renderDebitReminders(){
+  const container = document.getElementById('debitReminders');
+  const summary = document.getElementById('debitSummary');
+  if(!container) return;
+
+  // Group cards by debitBank (only cards with both debitDay and debitBank set)
+  const groups = new Map();
+  state.cards.forEach(c=>{
+    if(!c.debitDay || !c.debitBank) return;
+    const key = c.debitBank;
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(c);
+  });
+
+  if(groups.size === 0){
+    container.innerHTML = '<div class="debit-empty">在信用卡編輯頁設定「扣繳日」和「扣帳銀行」後，這裡會自動顯示提醒。</div>';
+    if(summary) summary.textContent = '';
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const entries = [];
+
+  groups.forEach((cards, bankKey)=>{
+    const debitDay = cards[0].debitDay;
+    // Next debit date
+    let next = new Date(today.getFullYear(), today.getMonth(), debitDay);
+    if(next <= today) next = new Date(today.getFullYear(), today.getMonth()+1, debitDay);
+    const daysLeft = Math.ceil((next - today)/(1000*60*60*24));
+
+    // Match assets by bank keyword
+    const assetTotal = state.assets
+      .filter(a=>{ const bk=getBankKey(a.name); return bk&&(bk===bankKey||bankKey.includes(bk)||bk.includes(bankKey)); })
+      .reduce((s,a)=>s+toTWD(a.amount||0,a.currency),0);
+
+    const billedTotal  = cards.reduce((s,c)=>s+(c.billed||0),0);
+    const pendingTotal = cards.reduce((s,c)=>s+Math.max((c.limit||0)-(c.available||0)-(c.billed||0),0),0);
+    const needed = billedTotal;
+    const ok = assetTotal >= needed;
+    const diff = assetTotal - needed;
+
+    entries.push({bankKey, cards, debitDay, next, daysLeft, assetTotal, billedTotal, pendingTotal, needed, ok, diff});
+  });
+
+  entries.sort((a,b)=>a.next-b.next);
+
+  // Summary
+  const notOk = entries.filter(e=>!e.ok).length;
+  if(summary) summary.textContent = notOk>0 ? `⚠ ${notOk} 個帳戶餘額不足` : `✓ 全部足夠`;
+
+  let html = '<div class="debit-grid">';
+  entries.forEach(e=>{
+    const dateStr = `${e.next.getMonth()+1}/${e.next.getDate()}`;
+    const urgency = e.daysLeft<=3?'var(--neg)':e.daysLeft<=7?'var(--warn)':'var(--ink-soft)';
+    const statusColor = e.ok?'var(--pos)':'var(--neg)';
+    const statusIcon = e.ok?'✓':'⚠';
+    const cardLines = e.cards.map(c=>{
+      const pend = Math.max((c.limit||0)-(c.available||0)-(c.billed||0),0);
+      return `${c.name}　已出帳 NT$&nbsp;${fmt(c.billed||0)}${pend>0?' + 未出帳 NT$&nbsp;'+fmt(pend):''}`;
+    }).join('<br>');
+    html += `
+      <div class="debit-row">
+        <div class="debit-date-col">
+          <div class="debit-date-num">${dateStr}</div>
+          <div class="debit-date-days" style="color:${urgency};">${e.daysLeft}天後</div>
+        </div>
+        <div class="debit-body">
+          <div class="debit-bank-name">${e.bankKey} 帳戶</div>
+          <div class="debit-cards-list">${cardLines}</div>
+          <div class="debit-status">
+            <span class="need">需備妥 NT$ ${fmt(e.needed)}</span>
+            <span class="have">· 帳戶現有 NT$ ${fmt(e.assetTotal)}</span>
+            <span class="${e.ok?'diff-ok':'diff-warn'}">${statusIcon} ${e.ok?'足夠（多 NT$ '+fmt(e.diff)+'）':'還差 NT$ '+fmt(Math.abs(e.diff))}</span>
+          </div>
+          ${e.pendingTotal>0?`<div style="font-family:var(--mono);font-size:11px;color:var(--ink-faint);">＋未出帳合計 NT$ ${fmt(e.pendingTotal)}（本期內將扣）</div>`:''}
+        </div>
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ============ Tab switching ============
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>switchTab(t.dataset.tab));
+});
+document.querySelectorAll('.subtab').forEach(t=>{
+  t.addEventListener('click', ()=>switchSubtab(t.dataset.sub));
+});
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+  const tab = document.querySelector(`.tab[data-tab="${name}"]`);
+  const content = document.getElementById('tab-'+name);
+  if(tab && content){
+    tab.classList.add('active');
+    content.classList.add('active');
+  }
+}
+function switchSubtab(name){
+  document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.subtab-content').forEach(x=>x.classList.remove('active'));
+  const sub = document.querySelector(`.subtab[data-sub="${name}"]`);
+  const content = document.getElementById(name);
+  if(sub && content){
+    sub.classList.add('active');
+    content.classList.add('active');
+  }
+}
+
+// ============ Keyboard shortcuts ============
+const TAB_MAP = {'1':'dashboard','2':'assets','3':'subs','4':'cards','5':'edit'};
+const SUBTAB_MAP = {'q':'edit-banks','w':'edit-expenses','e':'edit-subs','r':'edit-settings'};
+
+function isTypingInField(el){
+  if(!el)return false;
+  const tag = el.tagName;
+  return tag==='INPUT' || tag==='SELECT' || tag==='TEXTAREA';
+}
+
+function getVisibleInputs(){
+  // 取目前可見分頁裡所有可聚焦的輸入欄位
+  const activeTab = document.querySelector('.tab-content.active');
+  if(!activeTab)return [];
+  let containers = [activeTab];
+  // 編輯分頁要再進一層子分頁
+  if(activeTab.id === 'tab-edit'){
+    const activeSub = activeTab.querySelector('.subtab-content.active');
+    if(activeSub) containers = [activeSub];
+  }
+  const inputs = [];
+  containers.forEach(c=>{
+    c.querySelectorAll('input, select').forEach(el=>{
+      if(el.offsetParent !== null) inputs.push(el);  // 排除隱藏元素
+    });
+  });
+  return inputs;
+}
+
+function getVisibleGroups(){
+  // 取目前可見分頁的所有 [data-tab-group]
+  const activeTab = document.querySelector('.tab-content.active');
+  if(!activeTab)return [];
+  let container = activeTab;
+  if(activeTab.id === 'tab-edit'){
+    const activeSub = activeTab.querySelector('.subtab-content.active');
+    if(activeSub) container = activeSub;
+  }
+  return Array.from(container.querySelectorAll('[data-tab-group]'))
+    .filter(el => el.offsetParent !== null);
+}
+
+function moveFocus(direction){
+  const inputs = getVisibleInputs();
+  if(!inputs.length)return;
+  const cur = document.activeElement;
+  let idx = inputs.indexOf(cur);
+  if(idx === -1){
+    inputs[0].focus();
+    return;
+  }
+  let next = idx + direction;
+  if(next < 0) next = inputs.length - 1;
+  if(next >= inputs.length) next = 0;
+  inputs[next].focus();
+  inputs[next].select && inputs[next].select();
+}
+
+function moveGroup(direction){
+  // Tab 鍵：跳到下一個 group 的「第一個 input/select」
+  const groups = getVisibleGroups();
+  if(!groups.length){
+    // 沒有 group 就 fallback 到一般 input 移動
+    moveFocus(direction);
+    return;
+  }
+  const cur = document.activeElement;
+  // 找目前 focus 所在的 group
+  let curGroupIdx = -1;
+  groups.forEach((g,i)=>{ if(g.contains(cur)) curGroupIdx = i; });
+
+  let nextIdx;
+  if(curGroupIdx === -1){
+    nextIdx = direction > 0 ? 0 : groups.length - 1;
+  }else{
+    nextIdx = curGroupIdx + direction;
+    if(nextIdx < 0) nextIdx = groups.length - 1;
+    if(nextIdx >= groups.length) nextIdx = 0;
+  }
+
+  const targetGroup = groups[nextIdx];
+  const firstInput = targetGroup.querySelector('input, select');
+  if(firstInput){
+    firstInput.focus();
+    firstInput.select && firstInput.select();
+  }
+
+  // 短暫高亮目標 group
+  groups.forEach(g => g.classList.remove('group-active'));
+  targetGroup.classList.add('group-active');
+  // 確保看得到
+  targetGroup.scrollIntoView({behavior:'smooth', block:'nearest'});
+  setTimeout(()=>targetGroup.classList.remove('group-active'), 1200);
+}
+
+function focusFirstNewInput(){
+  // 跳到當前編輯子分頁的「新增表單」第一個輸入框
+  const activeTab = document.querySelector('.tab-content.active');
+  if(!activeTab || activeTab.id !== 'tab-edit'){
+    switchTab('edit');
+    setTimeout(focusFirstNewInput, 50);
+    return;
+  }
+  const activeSub = activeTab.querySelector('.subtab-content.active');
+  if(!activeSub)return;
+  const form = activeSub.querySelector('.editor-form');
+  if(!form)return;
+  const firstInput = form.querySelector('input, select');
+  if(firstInput){
+    firstInput.focus();
+    firstInput.select && firstInput.select();
+    firstInput.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+}
+
+function openKbHelp(){ document.getElementById('kbHelpOverlay').classList.add('open'); }
+function closeKbHelp(){ document.getElementById('kbHelpOverlay').classList.remove('open'); }
+
+// ── 信用卡子欄位鍵盤導航 ──
+// ── 銀行群組拖移排序 ──
+function setupBankGroupDrag(el, key){
+  // dragstart 的 e.target 是 el 本身，無法判斷點擊來源
+  // 改用 mousedown 追蹤是否從 drag-handle 開始拖
+  let _fromHandle = false;
+  el.addEventListener('mousedown', e=>{
+    _fromHandle = !!e.target.closest('.drag-handle');
+  });
+  el.addEventListener('dragstart', e=>{
+    if(!_fromHandle){ e.preventDefault(); return; }
+    _dragId = key; _dragType = 'bankGroup';
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(()=>el.classList.add('dragging'), 0);
+  });
+  el.addEventListener('dragend', ()=>{
+    el.classList.remove('dragging');
+    document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
+  });
+  el.addEventListener('dragover', e=>{
+    if(_dragType !== 'bankGroup') return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
+    el.classList.add('drag-over');
+  });
+  el.addEventListener('dragleave', e=>{
+    if(!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
+  });
+  el.addEventListener('drop', e=>{
+    e.preventDefault(); el.classList.remove('drag-over');
+    if(!_dragId || _dragId===key || _dragType!=='bankGroup') return;
+    recordHistory('重新排序銀行');
+    const fi = state.bankOrder.indexOf(_dragId), ti = state.bankOrder.indexOf(key);
+    if(fi>=0 && ti>=0){ const [item]=state.bankOrder.splice(fi,1); state.bankOrder.splice(ti,0,item); }
+    _dragId=null; _dragType=null;
+    saveState(); render();
+    showToast('銀行順序已更新','↕');
+  });
+}
+
+// ── 移到目前分頁中上/下一個可見 input ──
+function focusAdjacentInput(dir){
+  const activeTab = document.querySelector('.tab-content.active');
+  if(!activeTab) return;
+  const all = Array.from(activeTab.querySelectorAll(
+    'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
+  )).filter(el=>{ const r=el.getBoundingClientRect(); return r.width>0&&r.height>0; });
+  if(!all.length) return;
+  const idx = all.indexOf(document.activeElement);
+  // 找不到目前元素時從頭/尾開始；否則循環
+  const next = idx<0
+    ? (dir>0 ? all[0] : all[all.length-1])
+    : all[(idx + dir + all.length) % all.length];
+  if(next){ next.focus(); try{next.select();}catch(e){} }
+}
+
+function cardSubInputNav(e, el){
+  const isDown = e.key==='ArrowDown' || e.key==='Enter' || (e.key==='Tab' && !e.shiftKey);
+  const isUp   = e.key==='ArrowUp'   || (e.key==='Tab' && e.shiftKey);
+  if(!isDown && !isUp) return;
+
+  const cont = el.closest('.bank-row-subinputs');
+  if(!cont) return;
+
+  const inputs = Array.from(cont.querySelectorAll('input'));
+  const idx = inputs.indexOf(el);
+
+  if(isDown){
+    if(idx < inputs.length - 1){
+      e.preventDefault(); e.stopPropagation();
+      inputs[idx+1].focus(); inputs[idx+1].select();
+    } else {
+      // 最後一個欄位 → 跳到下一張卡的第一個欄位
+      const allConts = Array.from(document.querySelectorAll('#editBanksList .bank-row-subinputs, #editOtherAssets .bank-row-subinputs'));
+      const ci = allConts.indexOf(cont);
+      if(ci < allConts.length - 1){
+        const nextInputs = Array.from(allConts[ci+1].querySelectorAll('input'));
+        if(nextInputs.length){
+          e.preventDefault(); e.stopPropagation();
+          nextInputs[0].focus(); nextInputs[0].select();
+        }
+      }
+    }
+  } else {
+    if(idx > 0){
+      e.preventDefault(); e.stopPropagation();
+      inputs[idx-1].focus(); inputs[idx-1].select();
+    } else {
+      // 第一個欄位 → 跳到上一張卡的最後一個欄位
+      const allConts = Array.from(document.querySelectorAll('#editBanksList .bank-row-subinputs, #editOtherAssets .bank-row-subinputs'));
+      const ci = allConts.indexOf(cont);
+      if(ci > 0){
+        const prevInputs = Array.from(allConts[ci-1].querySelectorAll('input'));
+        if(prevInputs.length){
+          e.preventDefault(); e.stopPropagation();
+          prevInputs[prevInputs.length-1].focus(); prevInputs[prevInputs.length-1].select();
+        }
+      }
+    }
+  }
+}
+
+document.addEventListener('keydown', (e)=>{
+  // Help overlay 開著時，只接受 Esc 和 ?
+  const helpOpen = document.getElementById('kbHelpOverlay').classList.contains('open');
+  if(helpOpen){
+    if(e.key === 'Escape' || e.key === '?'){
+      e.preventDefault();
+      closeKbHelp();
+    }
+    return;
+  }
+
+  // ============ Undo / Redo (Ctrl/Cmd+Z, Ctrl+Y, Cmd+Shift+Z) ============
+  const mod = e.ctrlKey || e.metaKey;
+  if(mod && (e.key === 'z' || e.key === 'Z')){
+    if(e.shiftKey){
+      e.preventDefault();
+      redo();
+    }else{
+      e.preventDefault();
+      undo();
+    }
+    return;
+  }
+  if(mod && (e.key === 'y' || e.key === 'Y')){
+    e.preventDefault();
+    redo();
+    return;
+  }
+
+  // ? 永遠打開說明
+  if(e.key === '?' && !e.ctrlKey && !e.metaKey){
+    e.preventDefault();
+    openKbHelp();
+    return;
+  }
+
+  const typing = isTypingInField(document.activeElement);
+
+  // Tab 鍵：在輸入框內跳下一個/上一個 input（循環，略過按鈕）；不在輸入框時跳大項目
+  if(e.key === 'Tab'){
+    if(typing){
+      e.preventDefault();
+      focusAdjacentInput(e.shiftKey ? -1 : 1);
+      return;
+    }
+    const groups = getVisibleGroups();
+    if(groups.length > 0){
+      e.preventDefault();
+      moveGroup(e.shiftKey ? -1 : 1);
+      return;
+    }
+    return;
+  }
+
+  // 在輸入框裡的特殊鍵
+  if(typing){
+    if(e.key === 'Escape'){
+      e.preventDefault();
+      document.activeElement.blur();
+      return;
+    }
+    if(e.key === 'Enter'){
+      // 在 .editor-form 裡（新增表單）→ 觸發新增按鈕
+      const form = document.activeElement.closest('.editor-form');
+      if(form){
+        e.preventDefault();
+        const btn = form.querySelector('.btn-primary');
+        if(btn) btn.click();
+        return;
+      }
+      // 其他輸入框 → 移到下一個可見 input
+      e.preventDefault();
+      focusAdjacentInput(1);
+      return;
+    }
+    if(e.key === 'ArrowDown'){
+      e.preventDefault();
+      focusAdjacentInput(1);
+      return;
+    }
+    if(e.key === 'ArrowUp'){
+      e.preventDefault();
+      focusAdjacentInput(-1);
+      return;
+    }
+    // 其他都讓輸入框正常處理
+    return;
+  }
+
+  // 不在輸入框裡 → 全域快捷鍵
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const k = e.key.toLowerCase();
+
+  if(TAB_MAP[e.key]){
+    e.preventDefault();
+    switchTab(TAB_MAP[e.key]);
+    return;
+  }
+  if(SUBTAB_MAP[k]){
+    e.preventDefault();
+    switchTab('edit');
+    switchSubtab(SUBTAB_MAP[k]);
+    return;
+  }
+  if(k === 'n'){
+    e.preventDefault();
+    focusFirstNewInput();
+    return;
+  }
+  if(k === 'j' || e.key === 'ArrowDown'){
+    e.preventDefault();
+    moveFocus(1);
+    return;
+  }
+  if(k === 'k' || e.key === 'ArrowUp'){
+    e.preventDefault();
+    moveFocus(-1);
+    return;
+  }
+  if(k === 'g'){
+    e.preventDefault();
+    window.scrollTo({top:0, behavior:'smooth'});
+    return;
+  }
+});
+
+// ============ Fetch live rates ============
+async function fetchRates(){
+  try{
+    const res = await fetch('https://api.frankfurter.app/latest?base=TWD&symbols=JPY,KRW,USD');
+    const data = await res.json();
+    rates.JPY = 1 / data.rates.JPY;
+    rates.KRW = 1 / data.rates.KRW;
+    rates.USD = 1 / data.rates.USD;
+    rates._status = 'live';
+    rates._time = new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){
+    console.warn('rates fetch failed, using defaults', e);
+    rates._status = 'cached';
+  }
+  render();
+}
+
+// ============ Init ============
+render();
+fetchRates();
+</script>
+
+
+</body></html>
