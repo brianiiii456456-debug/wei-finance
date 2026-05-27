@@ -269,6 +269,12 @@ hr.div{border:none;border-top:1px solid var(--line);margin:32px 0;}
 .sync-dot.ok{background:var(--pos);}
 .sync-dot.error{background:var(--neg);}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+/* ============ Sync Banner ============ */
+.sync-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg-elev);border:1px solid var(--accent-dim);border-radius:8px;padding:12px 16px;margin-bottom:20px;animation:fadeIn .3s ease;}
+.sync-banner-text{font-size:13px;color:var(--ink-soft);line-height:1.5;}
+.sync-banner-text strong{color:var(--accent);display:block;margin-bottom:2px;font-size:14px;}
+.sync-banner-btn{flex-shrink:0;background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--sans);white-space:nowrap;}
+.sync-banner-btn:hover{opacity:.88;}
 .sync-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:999;}
 .sync-modal{background:var(--bg-card);border:1px solid var(--line);border-radius:10px;padding:24px;width:min(480px,92vw);box-shadow:0 8px 32px rgba(0,0,0,.5);}
 .sync-modal h3{font-family:var(--serif);font-size:18px;font-weight:500;margin:0 0 6px;color:var(--ink);}
@@ -441,6 +447,15 @@ input:focus, select:focus, button:focus-visible{
     <button class="tab" data-tab="cards">信用卡<span class="tab-key">4</span></button>
     <button class="tab edit" data-tab="edit">✏ 編輯<span class="tab-key">5</span></button>
   </nav>
+
+  <!-- ============ Sync Banner ============ -->
+  <div id="syncBanner" class="sync-banner" style="display:none">
+    <div class="sync-banner-text">
+      <strong>☁ 尚未連線同步</strong>
+      請先連線你的 GitHub Gist，才能載入和儲存你的財務數據。
+    </div>
+    <button class="sync-banner-btn" onclick="openSyncModal()">立即連線</button>
+  </div>
 
   <!-- ============ DASHBOARD ============ -->
   <section class="tab-content active" id="tab-dashboard">
@@ -1420,50 +1435,10 @@ input:focus, select:focus, button:focus-visible{
 
 const DEFAULT_DATA = {
   settings:{ cycleDay:25, dailyFood:400, dailyTransport:40 },
-  assets:[
-    {id:'a1', name:'中信存款', amount:50763, currency:'TWD'},
-    {id:'a2', name:'永豐存款（台幣）', amount:0, currency:'TWD'},
-    {id:'a3', name:'永豐存款（日幣）', amount:5580, currency:'JPY'},
-    {id:'a4', name:'永豐存款（美金）', amount:0, currency:'USD'},
-    {id:'a5', name:'國泰世華存款', amount:39401, currency:'TWD'},
-    {id:'a6', name:'星展存款', amount:4361, currency:'TWD'},
-    {id:'a7', name:'郵局存款', amount:214, currency:'TWD'},
-    {id:'a8', name:'錢包現金', amount:2100, currency:'TWD'},
-    {id:'a9', name:'Line Pay Money', amount:40, currency:'TWD'},
-    {id:'a10', name:'Line Points', amount:456, currency:'TWD'},
-    {id:'a11', name:'手錶一卡通', amount:278, currency:'TWD'},
-    {id:'a12', name:'渣打存款', amount:30620, currency:'TWD'},
-  ],
-  expenses:[
-    {id:'e1', name:'台哥大電信費', amount:2321, note:'每月'},
-    {id:'e2', name:'中華寬頻電信費', amount:1607, note:'每月1號'},
-    {id:'e3', name:'水費', amount:500, note:'偶數月'},
-    {id:'e4', name:'電費', amount:1000, note:'奇數月'},
-    {id:'e5', name:'房屋貸款', amount:30620, note:'每月'},
-  ],
-  subs:[
-    {id:'s1', name:'勇者系列贊助訂閱', amount:80, currency:'TWD', cycle:'monthly', expires:null, note:'每月80'},
-    {id:'s2', name:'YOASOBI 會員費', amount:440, currency:'JPY', cycle:'monthly', extra:1.015, expires:null, note:'每月220日幣×2人'},
-    {id:'s3', name:'Ado 會費', amount:6600, currency:'JPY', cycle:'yearly', expires:'2026-05-06', note:'年費'},
-    {id:'s4', name:'tuki. 月人會費', amount:1100, currency:'JPY', cycle:'monthly', expires:null, note:'2025/9/9 起'},
-    {id:'s5', name:'Phantom Siita 會費', amount:6600, currency:'JPY', cycle:'yearly', expires:'2026-07-15', note:'年費'},
-    {id:'s6', name:'Babymonster（Weverse）', amount:25000, currency:'KRW', cycle:'yearly', expires:'2026-11-07', note:'年費'},
-    {id:'s7', name:'Babymonster（JP）', amount:6600, currency:'JPY', cycle:'yearly', expires:'2026-12-31', note:'年費'},
-    {id:'s8', name:'Zutomayo', amount:6600, currency:'JPY', cycle:'yearly', expires:'2027-01-22', note:'年費'},
-    {id:'s9', name:'Fruits Zipper', amount:10560, currency:'JPY', cycle:'yearly', expires:'2026-06-06', note:'年費'},
-    {id:'s10', name:'高嶺のなでしこ', amount:880, currency:'JPY', cycle:'monthly', expires:null, note:'550 FC + 330 ひめりmessege'},
-    {id:'s11', name:'Weverse Yui', amount:130, currency:'TWD', cycle:'monthly', expires:null, note:'優衣 DM'},
-    {id:'s12', name:'Openrec.tv Kawaii Lab', amount:550, currency:'JPY', cycle:'monthly', expires:null, note:''},
-  ],
-  cards:[
-    {id:'c1', name:'中信信用卡', billed:0, limit:600000, available:451214, note:'中信帳戶自動扣繳', debitDay:null, debitBank:'中信'},
-    {id:'c2', name:'國泰世華信用卡', billed:39401, limit:400000, available:359751, note:'國泰帳戶自動扣繳', debitDay:null, debitBank:'國泰世華'},
-    {id:'c3', name:'新光信用卡', billed:0, limit:0, available:0, note:'', debitDay:null, debitBank:''},
-    {id:'c4', name:'台新信用卡', billed:2861, limit:0, available:0, note:'中信帳戶自動扣繳', debitDay:null, debitBank:'中信'},
-    {id:'c5', name:'星展信用卡', billed:4361, limit:120000, available:114759, note:'星展帳戶自動扣繳', debitDay:null, debitBank:'星展'},
-    {id:'c6', name:'永豐信用卡（台幣）', billed:0, limit:0, available:0, note:'', debitDay:null, debitBank:''},
-    {id:'c7', name:'富邦信用卡', billed:0, limit:0, available:0, note:'富邦自動扣繳', debitDay:null, debitBank:'富邦'},
-  ],
+  assets:[],
+  expenses:[],
+  subs:[],
+  cards:[],
 };
 
 let state = loadState();
@@ -1638,6 +1613,9 @@ function setSyncUI(status, label){
   const lbl=document.getElementById('syncLabel');
   if(dot) dot.className='sync-dot '+status;
   if(lbl) lbl.textContent=label||'☁ 同步';
+  // 橫幅：未連線時顯示，連線成功後隱藏
+  const banner=document.getElementById('syncBanner');
+  if(banner) banner.style.display=(status==='ok')?'none':'flex';
 }
 
 function schedulePush(){
@@ -1687,7 +1665,7 @@ async function pullFromGist(){
 function generateSyncUrl(){
   if(!_syncCfg) return null;
   const encoded = btoa(unescape(encodeURIComponent(_syncCfg.token+':'+_syncCfg.gistId)));
-  return location.origin + location.pathname + '#sync=' + encoded;
+  return location.origin + location.pathname + '?sync=' + encoded;
 }
 
 function copySyncUrl(){
@@ -1698,7 +1676,7 @@ function copySyncUrl(){
   const gistId  = (gistEl  && gistEl.value.trim())  || (_syncCfg && _syncCfg.gistId) || '';
   if(!token || !gistId){ showToast('請先填寫 Token 和 Gist ID','⚠'); return; }
   const encoded = btoa(unescape(encodeURIComponent(token+':'+gistId)));
-  const url = location.origin + location.pathname + '#sync=' + encoded;
+  const url = location.origin + location.pathname + '?sync=' + encoded;
   navigator.clipboard.writeText(url).then(()=>{
     showToast('連線網址已複製！把這個網址存成書籤或傳到手機','✓');
   }).catch(()=>{
@@ -1707,10 +1685,16 @@ function copySyncUrl(){
 }
 
 function parseHashSync(){
-  const hash = location.hash;
-  if(!hash.startsWith('#sync=')) return false;
+  // 支援 ?sync=... (query string，較通用) 和舊的 #sync=... (hash) 兩種格式
+  let encoded = null;
+  const qp = new URLSearchParams(location.search).get('sync');
+  if(qp){ encoded = qp; }
+  else {
+    const hash = location.hash;
+    if(hash.startsWith('#sync=')) encoded = hash.slice(6);
+  }
+  if(!encoded) return false;
   try{
-    const encoded = hash.slice(6);
     const decoded = decodeURIComponent(escape(atob(encoded)));
     const colonIdx = decoded.indexOf(':');
     if(colonIdx < 0) return false;
@@ -1718,7 +1702,8 @@ function parseHashSync(){
     const gistId = decoded.slice(colonIdx + 1);
     if(token && gistId){
       saveSyncCfg({token, gistId});
-      history.replaceState(null, '', location.pathname); // 清掉 hash（不讓 token 暴露在網址列）
+      // 清掉 URL 參數（不讓 token 長期暴露在網址列）
+      history.replaceState(null, '', location.pathname);
       return true;
     }
   }catch(e){ console.warn('parseHashSync', e); }
@@ -3027,7 +3012,9 @@ render();
 fetchRates();
 // Sync init — must run AFTER const SYNC_KEY / let _syncCfg are defined above
 loadSyncCfg();
-parseHashSync(); // 若網址含 #sync=... 自動套用連線設定（書籤捷徑用）
+parseHashSync(); // 若網址含 ?sync=... 或 #sync=... 自動套用連線設定
+// 初始橫幅：未連線時顯示
+if(!_syncCfg){ setSyncUI('idle','☁ 同步'); }
 setTimeout(()=>{ if(_syncCfg) pullFromGist(); }, 400);
 </script>
 
