@@ -1764,6 +1764,18 @@ function render(){
     document.getElementById('dailyFood').value = state.settings.dailyFood;
     document.getElementById('dailyTransport').value = state.settings.dailyTransport;
   }
+  // 還原因 render() 重建 DOM 而丟失的焦點
+  if(_pendingFocusIdx >= 0){
+    const activeTab2 = document.querySelector('.tab-content.active');
+    if(activeTab2){
+      const allInputs = Array.from(activeTab2.querySelectorAll(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
+      )).filter(el=>{ const r=el.getBoundingClientRect(); return r.width>0&&r.height>0; });
+      const target = allInputs[_pendingFocusIdx];
+      if(target){ target.focus(); try{target.select();}catch(e){} }
+    }
+    _pendingFocusIdx = -1;
+  }
 }
 
 function renderDashboard(){
@@ -2384,6 +2396,7 @@ function resetAll(){
 
 // ============ Drag & Drop ============
 let _dragId = null, _dragType = null;
+let _pendingFocusIdx = -1; // 給 render() 結束後還原焦點用
 function setupListDrag(el, id, arr, type){
   el.addEventListener('dragstart', e=>{
     _dragId = id; _dragType = type;
@@ -2769,11 +2782,13 @@ function focusAdjacentInput(dir){
   )).filter(el=>{ const r=el.getBoundingClientRect(); return r.width>0&&r.height>0; });
   if(!all.length) return;
   const idx = all.indexOf(document.activeElement);
-  // 找不到目前元素時從頭/尾開始；否則循環
-  const next = idx<0
-    ? (dir>0 ? all[0] : all[all.length-1])
-    : all[(idx + dir + all.length) % all.length];
-  if(next){ next.focus(); try{next.select();}catch(e){} }
+  // 找不到目前 focus 的 input → 不動（避免莫名跳回第一格）
+  if(idx < 0) return;
+  const nextIdx = (idx + dir + all.length) % all.length;
+  // 記下目標 index，讓 render() 結束後自動還原焦點
+  _pendingFocusIdx = nextIdx;
+  all[nextIdx].focus();
+  try{ all[nextIdx].select(); }catch(e){}
 }
 
 function cardSubInputNav(e, el){
