@@ -426,7 +426,7 @@ input:focus, select:focus, button:focus-visible{
       <div id="syncModalMsg" class="sync-status-msg"></div>
       <div class="sync-modal-actions">
         <button class="btn-primary" onclick="connectGist()">連線並同步</button>
-        <button class="btn-ghost" onclick="copySyncUrl()" id="syncCopyUrlBtn" style="display:none;">📋 複製連線網址</button>
+        <button class="btn-ghost" onclick="copySyncUrl()">📋 複製連線網址</button>
         <button class="btn-ghost" onclick="closeSyncModal()">取消</button>
         <button class="btn-ghost" id="syncDisconnectBtn" onclick="disconnectGist()" style="display:none;margin-left:auto;">中斷連線</button>
       </div>
@@ -1467,9 +1467,7 @@ const DEFAULT_DATA = {
 };
 
 let state = loadState();
-loadSyncCfg();
-parseHashSync(); // 若網址含 #sync=... 自動套用連線設定（書籤捷徑用）
-window.addEventListener('load', ()=>{ if(_syncCfg) pullFromGist(); });
+// sync init is deferred below (after SYNC_KEY / _syncCfg are defined)
 let rates = {JPY:0.21, KRW:0.022, USD:31.5, _status:'cached', _time:null};
 
 // ============ Undo/Redo history ============
@@ -1693,10 +1691,16 @@ function generateSyncUrl(){
 }
 
 function copySyncUrl(){
-  const url = generateSyncUrl();
-  if(!url){ showToast('請先連線再複製','⚠'); return; }
+  // 優先讀 modal 欄位（即使尚未連線也能產生網址）
+  const tokenEl = document.getElementById('syncToken');
+  const gistEl  = document.getElementById('syncGistId');
+  const token   = (tokenEl && tokenEl.value.trim()) || (_syncCfg && _syncCfg.token) || '';
+  const gistId  = (gistEl  && gistEl.value.trim())  || (_syncCfg && _syncCfg.gistId) || '';
+  if(!token || !gistId){ showToast('請先填寫 Token 和 Gist ID','⚠'); return; }
+  const encoded = btoa(unescape(encodeURIComponent(token+':'+gistId)));
+  const url = location.origin + location.pathname + '#sync=' + encoded;
   navigator.clipboard.writeText(url).then(()=>{
-    showToast('連線網址已複製！存成書籤或傳到手機','✓');
+    showToast('連線網址已複製！把這個網址存成書籤或傳到手機','✓');
   }).catch(()=>{
     prompt('請手動複製這個網址：', url);
   });
@@ -1727,16 +1731,13 @@ function openSyncModal(){
   const gistInput=document.getElementById('syncGistId');
   const discBtn=document.getElementById('syncDisconnectBtn');
   const msg=document.getElementById('syncModalMsg');
-  const copyBtn=document.getElementById('syncCopyUrlBtn');
   if(_syncCfg){
     tokenInput.value=_syncCfg.token;
     gistInput.value=_syncCfg.gistId;
     discBtn.style.display='';
-    if(copyBtn) copyBtn.style.display='';
   } else {
     tokenInput.value=''; gistInput.value='';
     discBtn.style.display='none';
-    if(copyBtn) copyBtn.style.display='none';
   }
   msg.textContent=''; msg.className='sync-status-msg';
   modal.style.display='flex';
@@ -1770,7 +1771,6 @@ async function connectGist(){
       msg.className='sync-status-msg ok'; msg.textContent='✓ 連線成功，已上傳本機數據';
     }
     document.getElementById('syncDisconnectBtn').style.display='';
-    const cb=document.getElementById('syncCopyUrlBtn'); if(cb) cb.style.display='';
     setSyncUI('ok','☁ 已連線');
     setTimeout(closeSyncModal,1500);
   }catch(e){
@@ -3025,6 +3025,10 @@ async function fetchRates(){
 // ============ Init ============
 render();
 fetchRates();
+// Sync init — must run AFTER const SYNC_KEY / let _syncCfg are defined above
+loadSyncCfg();
+parseHashSync(); // 若網址含 #sync=... 自動套用連線設定（書籤捷徑用）
+setTimeout(()=>{ if(_syncCfg) pullFromGist(); }, 400);
 </script>
 
 
