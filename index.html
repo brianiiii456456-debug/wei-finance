@@ -426,6 +426,7 @@ input:focus, select:focus, button:focus-visible{
       <div id="syncModalMsg" class="sync-status-msg"></div>
       <div class="sync-modal-actions">
         <button class="btn-primary" onclick="connectGist()">連線並同步</button>
+        <button class="btn-ghost" onclick="copySyncUrl()" id="syncCopyUrlBtn" style="display:none;">📋 複製連線網址</button>
         <button class="btn-ghost" onclick="closeSyncModal()">取消</button>
         <button class="btn-ghost" id="syncDisconnectBtn" onclick="disconnectGist()" style="display:none;margin-left:auto;">中斷連線</button>
       </div>
@@ -1467,6 +1468,7 @@ const DEFAULT_DATA = {
 
 let state = loadState();
 loadSyncCfg();
+parseHashSync(); // 若網址含 #sync=... 自動套用連線設定（書籤捷徑用）
 window.addEventListener('load', ()=>{ if(_syncCfg) pullFromGist(); });
 let rates = {JPY:0.21, KRW:0.022, USD:31.5, _status:'cached', _time:null};
 
@@ -1684,19 +1686,57 @@ async function pullFromGist(){
   }catch(e){ setSyncUI('error','同步失敗'); console.warn('Gist pull',e); }
 }
 
+function generateSyncUrl(){
+  if(!_syncCfg) return null;
+  const encoded = btoa(unescape(encodeURIComponent(_syncCfg.token+':'+_syncCfg.gistId)));
+  return location.origin + location.pathname + '#sync=' + encoded;
+}
+
+function copySyncUrl(){
+  const url = generateSyncUrl();
+  if(!url){ showToast('請先連線再複製','⚠'); return; }
+  navigator.clipboard.writeText(url).then(()=>{
+    showToast('連線網址已複製！存成書籤或傳到手機','✓');
+  }).catch(()=>{
+    prompt('請手動複製這個網址：', url);
+  });
+}
+
+function parseHashSync(){
+  const hash = location.hash;
+  if(!hash.startsWith('#sync=')) return false;
+  try{
+    const encoded = hash.slice(6);
+    const decoded = decodeURIComponent(escape(atob(encoded)));
+    const colonIdx = decoded.indexOf(':');
+    if(colonIdx < 0) return false;
+    const token = decoded.slice(0, colonIdx);
+    const gistId = decoded.slice(colonIdx + 1);
+    if(token && gistId){
+      saveSyncCfg({token, gistId});
+      history.replaceState(null, '', location.pathname); // 清掉 hash（不讓 token 暴露在網址列）
+      return true;
+    }
+  }catch(e){ console.warn('parseHashSync', e); }
+  return false;
+}
+
 function openSyncModal(){
   const modal=document.getElementById('syncModal');
   const tokenInput=document.getElementById('syncToken');
   const gistInput=document.getElementById('syncGistId');
   const discBtn=document.getElementById('syncDisconnectBtn');
   const msg=document.getElementById('syncModalMsg');
+  const copyBtn=document.getElementById('syncCopyUrlBtn');
   if(_syncCfg){
     tokenInput.value=_syncCfg.token;
     gistInput.value=_syncCfg.gistId;
     discBtn.style.display='';
+    if(copyBtn) copyBtn.style.display='';
   } else {
     tokenInput.value=''; gistInput.value='';
     discBtn.style.display='none';
+    if(copyBtn) copyBtn.style.display='none';
   }
   msg.textContent=''; msg.className='sync-status-msg';
   modal.style.display='flex';
@@ -1730,6 +1770,7 @@ async function connectGist(){
       msg.className='sync-status-msg ok'; msg.textContent='✓ 連線成功，已上傳本機數據';
     }
     document.getElementById('syncDisconnectBtn').style.display='';
+    const cb=document.getElementById('syncCopyUrlBtn'); if(cb) cb.style.display='';
     setSyncUI('ok','☁ 已連線');
     setTimeout(closeSyncModal,1500);
   }catch(e){
