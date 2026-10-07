@@ -2475,25 +2475,47 @@ function setupListDrag(el, id, arr, type){
   el.addEventListener('dragend', ()=>{
     el.classList.remove('dragging');
     document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
+    const parent = el.parentElement;
+    const orderedIds = parent ? Array.from(parent.querySelectorAll('[data-drag-id]')).map(item=>item.dataset.dragId) : [];
+    const changed = orderedIds.length === arr.length && orderedIds.some((itemId,index)=>itemId!==arr[index].id);
+    if(changed){
+      recordHistory(type==='assets'?'重新排序資產':type==='subs'?'重新排序訂閱':'重新排序信用卡');
+      const byId = new Map(arr.map(item=>[item.id,item]));
+      arr.splice(0, arr.length, ...orderedIds.map(itemId=>byId.get(itemId)).filter(Boolean));
+      saveState(); render();
+      showToast('順序已更新','↕');
+    }
+    _dragId=null; _dragType=null;
   });
   el.addEventListener('dragover', e=>{
     if(_dragType !== type) return;
     e.preventDefault(); e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
-    el.classList.add('drag-over');
+    const dragged = document.querySelector(`[data-drag-id="${_dragId}"]`);
+    const parent = el.parentElement;
+    if(!dragged || !parent || dragged===el) return;
+    const before = new Map(Array.from(parent.children).map(item=>[item,item.getBoundingClientRect()]));
+    const rect = el.getBoundingClientRect();
+    const insertBefore = e.clientY < rect.top + rect.height / 2;
+    if(insertBefore) parent.insertBefore(dragged, el);
+    else parent.insertBefore(dragged, el.nextSibling);
+    Array.from(parent.children).forEach(item=>{
+      const previous = before.get(item); if(!previous) return;
+      const now = item.getBoundingClientRect();
+      const deltaY = previous.top - now.top;
+      if(!deltaY) return;
+      item.style.transition = 'transform 0s';
+      item.style.transform = `translateY(${deltaY}px)`;
+      requestAnimationFrame(()=>{
+        item.style.transition = 'transform .18s cubic-bezier(.2,.8,.2,1)';
+        item.style.transform = '';
+      });
+    });
   });
   el.addEventListener('dragleave', e=>{
     if(!el.contains(e.relatedTarget)) el.classList.remove('drag-over');
   });
   el.addEventListener('drop', e=>{
     e.preventDefault(); el.classList.remove('drag-over');
-    if(!_dragId || _dragId===id || _dragType!==type) return;
-    recordHistory(type==='assets'?'重新排序資產':type==='subs'?'重新排序訂閱':'重新排序信用卡');
-    const fi = arr.findIndex(x=>x.id===_dragId), ti = arr.findIndex(x=>x.id===id);
-    if(fi>=0 && ti>=0){ const [item]=arr.splice(fi,1); arr.splice(ti,0,item); }
-    _dragId=null; _dragType=null;
-    saveState(); render();
-    showToast('順序已更新','↕');
   });
 }
 
