@@ -385,6 +385,7 @@ input:focus, select:focus, button:focus-visible{
 .inline-edit-select{font-family:var(--mono);font-size:12px;padding:4px 7px;background:var(--bg-elev);border:1px solid var(--accent);border-radius:4px;color:var(--ink);font-weight:500;max-width:100%;outline:none;}
 
 /* ============ Edit row with drag handle ============ */
+.row.has-handle{grid-template-columns:auto 1fr auto;gap:8px;}
 .row.editable.has-handle{grid-template-columns:auto 1fr auto auto;gap:8px;}
 
 /* ============ Debit Reminders ============ */
@@ -1876,14 +1877,18 @@ function renderAssetsView(){
   state.assets.forEach(a=>{
     const twd = toTWD(a.amount||0, a.currency);
     const div = document.createElement('div');
-    div.className = 'row';
+    div.className = 'row has-handle';
+    div.setAttribute('data-drag-id', a.id);
+    div.setAttribute('draggable','true');
     div.innerHTML = `
+      <span class="drag-handle" title="拖曳調整順序">⠿</span>
       <div>
         <div class="row-label inline-field" title="雙擊編輯名稱" ondblclick="openOverviewFieldEdit('asset','${a.id}','name',this)">${a.name}</div>
         <span class="row-meta inline-field" title="雙擊編輯幣別" ondblclick="openOverviewFieldEdit('asset','${a.id}','currency',this)">${a.currency}${a.currency!=='TWD'?` · 原幣 ${fmt(a.amount)}`:''}</span>
       </div>
       <div class="row-amount inline-field" title="雙擊編輯金額" ondblclick="openOverviewFieldEdit('asset','${a.id}','amount',this)">NT$ ${fmt(twd)}</div>
     `;
+    setupListDrag(div, a.id, state.assets, 'assets');
     list.appendChild(div);
   });
   document.getElementById('assetsCount').textContent = state.assets.length;
@@ -2483,7 +2488,7 @@ function setupListDrag(el, id, arr, type){
   el.addEventListener('drop', e=>{
     e.preventDefault(); el.classList.remove('drag-over');
     if(!_dragId || _dragId===id || _dragType!==type) return;
-    recordHistory(type==='subs'?'重新排序訂閱':'重新排序信用卡');
+    recordHistory(type==='assets'?'重新排序資產':type==='subs'?'重新排序訂閱':'重新排序信用卡');
     const fi = arr.findIndex(x=>x.id===_dragId), ti = arr.findIndex(x=>x.id===id);
     if(fi>=0 && ti>=0){ const [item]=arr.splice(fi,1); arr.splice(ti,0,item); }
     _dragId=null; _dragType=null;
