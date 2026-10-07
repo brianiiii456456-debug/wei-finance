@@ -155,6 +155,8 @@ html,body{overflow-x:hidden;}
 .sub-expires{font-size:12px;color:var(--ink-soft);margin-top:4px;font-weight:500;}
 .sub-expires.warn{color:var(--warn);font-weight:600;}
 .sub-expires.expired{color:var(--neg);}
+.sub-payment{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.02em;cursor:pointer;}
+.sub-payment strong{color:var(--accent);font-weight:600;}
 
 /* ============ Inline expiry date edit ============ */
 .sub-expires.editable{cursor:pointer;position:relative;}
@@ -380,6 +382,7 @@ input:focus, select:focus, button:focus-visible{
 .inline-field:hover{text-decoration:underline;text-decoration-style:dashed;text-underline-offset:3px;text-decoration-color:var(--accent-dim);}
 .inline-edit-input{font-family:var(--mono);font-size:14px;padding:4px 8px;background:var(--bg-elev);border:1px solid var(--accent);border-radius:4px;color:var(--ink);font-weight:500;outline:none;width:100%;box-sizing:border-box;}
 .inline-edit-input.sm{font-size:12px;padding:3px 7px;}
+.inline-edit-select{font-family:var(--mono);font-size:12px;padding:4px 7px;background:var(--bg-elev);border:1px solid var(--accent);border-radius:4px;color:var(--ink);font-weight:500;max-width:100%;outline:none;}
 
 /* ============ Edit row with drag handle ============ */
 .row.editable.has-handle{grid-template-columns:auto 1fr auto auto;gap:8px;}
@@ -1230,6 +1233,7 @@ input:focus, select:focus, button:focus-visible{
           </div>
           <div><label>到期日（可空）</label><input type="date" id="newSubExpires"></div>
           <div><label>開始日（可空）</label><input type="date" id="newSubStartDate"></div>
+          <div><label>付款信用卡（可空）</label><select id="newSubPaymentCard"></select></div>
           <div class="full-row"><label>備註</label><input type="text" id="newSubNote" placeholder="例：年費 550FC+330訊息"></div>
           <div class="submit-row"><button class="btn btn-primary" onclick="addSub()">+ 新增訂閱</button></div>
         </div>
@@ -1513,8 +1517,8 @@ function loadState(){
       });
       // Migrate: ensure cards have debitDay/debitBank
       s.cards = s.cards.map(c=>Object.assign({debitDay:null,debitBank:''},c));
-      // Migrate: ensure subs have startDate
-      s.subs = s.subs.map(sub=>Object.assign({startDate:null},sub));
+      // Migrate: ensure subs have startDate/paymentCardId
+      s.subs = s.subs.map(sub=>Object.assign({startDate:null,paymentCardId:null},sub));
       return s;
     }
   }catch(e){console.warn('loadState fail',e);}
@@ -1531,6 +1535,34 @@ const fmt = n => {
   const abs = Math.abs(Math.round(n));
   return sign + abs.toLocaleString('en-US');
 };
+const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+const paymentCardName = id => state.cards.find(c=>c.id===id)?.name || '未設定付款卡';
+const paymentCardOptions = selected => `<option value="">未設定付款卡</option>${state.cards.map(c=>`<option value="${c.id}" ${c.id===selected?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}`;
+function populateNewSubPaymentCards(){ const el=document.getElementById('newSubPaymentCard'); if(el) el.innerHTML=paymentCardOptions(el.value||''); }
+
+function openOverviewFieldEdit(type,id,field,el){
+  const items = type==='asset'?state.assets:type==='expense'?state.expenses:type==='sub'?state.subs:state.cards;
+  const item = items.find(x=>x.id===id); if(!item) return;
+  const selectFields = {currency:['TWD','JPY','KRW','USD'],cycle:['monthly','yearly'],paymentCardId:null};
+  const isSelect = Object.prototype.hasOwnProperty.call(selectFields,field);
+  const isDate = ['startDate','expires'].includes(field);
+  const isNumber = ['amount','billed','limit','available','debitDay'].includes(field);
+  const original = item[field] ?? '';
+  el.innerHTML = isSelect ? `<select class="inline-edit-select">${field==='paymentCardId'?paymentCardOptions(original):selectFields[field].map(v=>`<option value="${v}" ${v===original?'selected':''}>${v==='monthly'?'每月':v==='yearly'?'每年':v}</option>`).join('')}</select>` : `<input class="inline-edit-input sm" type="${isDate?'date':isNumber?'number':'text'}" ${isNumber?'step="any"':''} value="${escapeHtml(original)}">`;
+  const control=el.querySelector('input,select'); control.focus(); control.select?.();
+  const save=()=>{
+    let value=control.value;
+    if(isNumber) value=parseFloat(value)||0;
+    if(isDate || field==='paymentCardId') value=value||null;
+    if(['name','note','debitBank'].includes(field)) value=value.trim()||null;
+    if(field==='name'&&!value){ render(); return; }
+    if(item[field]!==value){ recordHistory(`修改 ${item.name}`); item[field]=value; saveState(); showToast(`已儲存：${item.name}`,'✓'); }
+    render();
+  };
+  control.addEventListener('blur',save);
+  control.addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();control.removeEventListener('blur',save);save();} if(e.key==='Escape'){e.preventDefault();control.removeEventListener('blur',save);render();} });
+  if(isSelect) control.addEventListener('change',save);
+}
 function toTWD(amount,currency){
   if(currency==='TWD')return amount;
   if(currency==='JPY')return amount * rates.JPY;
@@ -1783,6 +1815,7 @@ function render(){
   renderEditBanks();
   renderEditExpenses();
   renderEditSubs();
+  populateNewSubPaymentCards();
   // settings sync
   const cd = document.getElementById('cycleDay');
   if(cd){
@@ -1846,10 +1879,10 @@ function renderAssetsView(){
     div.className = 'row';
     div.innerHTML = `
       <div>
-        <div class="row-label">${a.name}</div>
-        <span class="row-meta">${a.currency}${a.currency!=='TWD'?` · 原幣 ${fmt(a.amount)}`:''}</span>
+        <div class="row-label inline-field" title="雙擊編輯名稱" ondblclick="openOverviewFieldEdit('asset','${a.id}','name',this)">${a.name}</div>
+        <span class="row-meta inline-field" title="雙擊編輯幣別" ondblclick="openOverviewFieldEdit('asset','${a.id}','currency',this)">${a.currency}${a.currency!=='TWD'?` · 原幣 ${fmt(a.amount)}`:''}</span>
       </div>
-      <div class="row-amount">NT$ ${fmt(twd)}</div>
+      <div class="row-amount inline-field" title="雙擊編輯金額" ondblclick="openOverviewFieldEdit('asset','${a.id}','amount',this)">NT$ ${fmt(twd)}</div>
     `;
     list.appendChild(div);
   });
@@ -1881,10 +1914,10 @@ function renderExpensesView(){
     div.className = 'row';
     div.innerHTML = `
       <div>
-        <div class="row-label">${e.name}</div>
-        ${e.note?`<span class="row-meta">${e.note}</span>`:''}
+        <div class="row-label inline-field" title="雙擊編輯名稱" ondblclick="openOverviewFieldEdit('expense','${e.id}','name',this)">${e.name}</div>
+        <span class="row-meta inline-field" title="雙擊編輯備註" ondblclick="openOverviewFieldEdit('expense','${e.id}','note',this)">${e.note||'…'}</span>
       </div>
-      <div class="row-amount">NT$ ${fmt(e.amount||0)}</div>
+      <div class="row-amount inline-field" title="雙擊編輯金額" ondblclick="openOverviewFieldEdit('expense','${e.id}','amount',this)">NT$ ${fmt(e.amount||0)}</div>
     `;
     list.appendChild(div);
   });
@@ -1942,15 +1975,18 @@ function renderSubsView(){
       <div class="sub-name ${nameClass}">
         <div class="sub-name-left">
           ${dotClass?`<span class="sub-dot ${dotClass}"></span>`:''}
-          <span class="sub-name-text">${s.name}</span>
+          <span class="sub-name-text inline-field" title="雙擊編輯名稱" ondblclick="openOverviewFieldEdit('sub','${s.id}','name',this)">${s.name}</span>
         </div>
         <span class="currency-tag">${s.currency}</span>
       </div>
       <div class="sub-price">
-        ${fmt(s.amount)} ${s.currency} / ${s.cycle==='yearly'?'年':'月'}
+        <span class="inline-field" title="雙擊編輯金額" ondblclick="openOverviewFieldEdit('sub','${s.id}','amount',this)">${fmt(s.amount)}</span>
+        <span class="inline-field" title="雙擊編輯幣別" ondblclick="openOverviewFieldEdit('sub','${s.id}','currency',this)">${s.currency}</span> /
+        <span class="inline-field" title="雙擊編輯週期" ondblclick="openOverviewFieldEdit('sub','${s.id}','cycle',this)">${s.cycle==='yearly'?'年':'月'}</span>
         ${s.currency!=='TWD'?` · 月均 NT$ ${fmt(twd)}`:''}
       </div>
-      ${s.note?`<div class="sub-meta">${s.note}</div>`:''}
+      <div class="sub-payment" title="雙擊選擇付款信用卡" ondblclick="openOverviewFieldEdit('sub','${s.id}','paymentCardId',this)">付款：<strong>${paymentCardName(s.paymentCardId)}</strong></div>
+      <div class="sub-meta"><span class="inline-field" title="雙擊編輯備註" ondblclick="openOverviewFieldEdit('sub','${s.id}','note',this)">${s.note||'…'}</span> · <span class="inline-field" title="雙擊編輯開始日" ondblclick="openOverviewFieldEdit('sub','${s.id}','startDate',this)">${s.startDate?'開始 '+s.startDate:'開始日未設定'}</span></div>
       <div class="sub-expires ${expireClass} editable" title="雙擊可編輯到期日" ondblclick="openSubExpiryEdit('${s.id}', this)">${expireText}</div>
     `;
     div.setAttribute('data-drag-id', s.id);
@@ -2018,13 +2054,14 @@ function renderCardsView(){
     div.setAttribute('draggable','true');
     div.innerHTML = `
       <div>
-        <div class="cc-name">${c.name}</div>
-        ${c.note?`<span class="row-meta">${c.note}</span>`:''}
+        <div class="cc-name inline-field" title="雙擊編輯卡名" ondblclick="openOverviewFieldEdit('card','${c.id}','name',this)">${c.name}</div>
+        <span class="row-meta inline-field" title="雙擊編輯備註" ondblclick="openOverviewFieldEdit('card','${c.id}','note',this)">${c.note||'…'}</span>
+        <span class="row-meta">扣繳：<span class="inline-field" title="雙擊編輯扣繳日" ondblclick="openOverviewFieldEdit('card','${c.id}','debitDay',this)">${c.debitDay?c.debitDay+' 日':'未設定日期'}</span> · <span class="inline-field" title="雙擊編輯扣帳銀行" ondblclick="openOverviewFieldEdit('card','${c.id}','debitBank',this)">${c.debitBank||'未設定銀行'}</span></span>
       </div>
       <div class="cc-stack">
-        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed">NT$ ${fmt(c.billed||0)}</span></div>
+        <div class="cc-line"><span class="cc-tag">已出帳</span><span class="cc-val billed inline-field" title="雙擊編輯" ondblclick="openOverviewFieldEdit('card','${c.id}','billed',this)">NT$ ${fmt(c.billed||0)}</span></div>
         <div class="cc-line"><span class="cc-tag">未出帳</span><span class="cc-val pending">NT$ ${fmt(pending)}</span></div>
-        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val">NT$ ${fmt(c.available||0)} / ${fmt(c.limit||0)}</span></div>
+        <div class="cc-line"><span class="cc-tag">可用</span><span class="cc-val inline-field" title="雙擊編輯可用額度" ondblclick="openOverviewFieldEdit('card','${c.id}','available',this)">NT$ ${fmt(c.available||0)}</span><span class="cc-tag">/ 額度</span><span class="cc-val inline-field" title="雙擊編輯信用額度" ondblclick="openOverviewFieldEdit('card','${c.id}','limit',this)">NT$ ${fmt(c.limit||0)}</span></div>
       </div>
     `;
     setupListDrag(div, c.id, state.cards, 'cards');
@@ -2324,9 +2361,10 @@ function addSub(){
   const cycle = document.getElementById('newSubCycle').value;
   const expires = document.getElementById('newSubExpires').value||null;
   const startDate = document.getElementById('newSubStartDate').value||null;
+  const paymentCardId = document.getElementById('newSubPaymentCard').value||null;
   const note = document.getElementById('newSubNote').value.trim();
   recordHistory(`新增 ${name}`);
-  state.subs.push({id:'s'+Date.now(), name, amount, currency, cycle, expires, startDate, note});
+  state.subs.push({id:'s'+Date.now(), name, amount, currency, cycle, expires, startDate, paymentCardId, note});
   ['newSubName','newSubAmount','newSubExpires','newSubStartDate','newSubNote'].forEach(i=>document.getElementById(i).value='');
   saveState(); render();
 }
