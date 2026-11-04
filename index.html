@@ -1550,7 +1550,9 @@ function openOverviewFieldEdit(type,id,field,el){
   const isNumber = ['amount','billed','limit','available','debitDay'].includes(field);
   const original = item[field] ?? '';
   el.innerHTML = isSelect ? `<select class="inline-edit-select">${field==='paymentCardId'?paymentCardOptions(original):selectFields[field].map(v=>`<option value="${v}" ${v===original?'selected':''}>${v==='monthly'?'每月':v==='yearly'?'每年':v}</option>`).join('')}</select>` : `<input class="inline-edit-input sm" type="${isDate?'date':isNumber?'number':'text'}" ${isNumber?'step="any"':''} value="${escapeHtml(original)}">`;
-  const control=el.querySelector('input,select'); control.focus(); control.select?.();
+  const control=el.querySelector('input,select');
+  if(isNumber) control.dataset.mathKey = `${type}:${id}:${field}`;
+  control.focus(); control.select?.();
   const save=()=>{
     let value=control.value;
     if(isNumber) value=parseFloat(value)||0;
@@ -2309,6 +2311,7 @@ function addAsset(){
   state.assets.push({id:'a'+Date.now(), name, amount, currency});
   document.getElementById('newAssetName').value='';
   document.getElementById('newAssetAmount').value='';
+  clearMathExpressionsById('newAssetAmount');
   hideAddForms();
   saveState(); render();
 }
@@ -2339,6 +2342,7 @@ function addExpense(){
   document.getElementById('newExpName').value='';
   document.getElementById('newExpAmount').value='';
   document.getElementById('newExpNote').value='';
+  clearMathExpressionsById('newExpAmount');
   saveState(); render();
 }
 function updateSub(id,field,val){
@@ -2371,6 +2375,7 @@ function addSub(){
   recordHistory(`新增 ${name}`);
   state.subs.push({id:'s'+Date.now(), name, amount, currency, cycle, expires, startDate, paymentCardId, note});
   ['newSubName','newSubAmount','newSubExpires','newSubStartDate','newSubNote'].forEach(i=>document.getElementById(i).value='');
+  clearMathExpressionsById('newSubAmount');
   saveState(); render();
 }
 function updateCard(id,field,val){
@@ -2405,6 +2410,7 @@ function addCard(){
   recordHistory(`新增 ${name}`);
   state.cards.push({id:'c'+Date.now(), name, billed, limit, available, note, debitDay, debitBank});
   ['newCardName','newCardBilled','newCardLimit','newCardAvailable','newCardNote','newCardDebitDay','newCardDebitBank'].forEach(i=>document.getElementById(i).value='');
+  clearMathExpressionsById('newCardBilled','newCardLimit','newCardAvailable');
   hideAddForms();
   saveState(); render();
 }
@@ -2940,12 +2946,15 @@ let mathExpressions = (()=>{
   try{ return JSON.parse(sessionStorage.getItem(MATH_EXPRESSIONS_KEY)||'{}'); }catch(e){ return {}; }
 })();
 function mathExpressionKey(input){
-  // 新增表單在送出後會清空，不保留上一筆算式，避免下次新增時誤帶入。
-  if(input.id && input.id.startsWith('new')) return null;
+  if(input.dataset.mathKey) return `field:${input.dataset.mathKey}`;
   return input.id ? `id:${input.id}` : `change:${input.getAttribute('onchange')||''}`;
 }
 function saveMathExpressions(){
   try{ sessionStorage.setItem(MATH_EXPRESSIONS_KEY,JSON.stringify(mathExpressions)); }catch(e){}
+}
+function clearMathExpressionsById(...ids){
+  ids.forEach(id=>delete mathExpressions[`id:${id}`]);
+  saveMathExpressions();
 }
 function calculateAmountExpression(text){
   const expression = String(text ?? '').replaceAll(',','').trim();
