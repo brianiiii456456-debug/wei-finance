@@ -2928,6 +2928,57 @@ function cardSubInputNav(e, el){
   }
 }
 
+// ============ 金額算式輸入 ============
+// 金額欄位可輸入 1200+350、6600/12、(500+300)*2 等基本四則運算。
+// 只接受數字、小數點、括號及 + - * /，不執行任意 JavaScript。
+function isMathAmountInput(input){
+  return input instanceof HTMLInputElement &&
+    (input.dataset.mathAmount === 'true' || input.step === 'any' || ['dailyFood','dailyTransport'].includes(input.id));
+}
+function calculateAmountExpression(text){
+  const expression = String(text ?? '').replaceAll(',','').trim();
+  if(!expression || !/^[0-9+\-*/().\s]+$/.test(expression)) return null;
+  try{
+    const value = Function(`"use strict"; return (${expression})`)();
+    return Number.isFinite(value) ? value : null;
+  }catch(e){ return null; }
+}
+function resolveMathAmountInput(input, showError=true){
+  if(!isMathAmountInput(input)) return true;
+  const result = calculateAmountExpression(input.value);
+  if(result === null){
+    input.value = input.dataset.mathLastValue ?? '';
+    if(showError) showToast('無法計算：請輸入基本四則運算', '⚠', true);
+    return false;
+  }
+  input.value = String(result);
+  input.dataset.mathLastValue = input.value;
+  return true;
+}
+
+document.addEventListener('focusin', e=>{
+  const input = e.target;
+  if(!isMathAmountInput(input)) return;
+  input.dataset.mathAmount = 'true';
+  input.dataset.mathLastValue = input.value;
+  // number 欄位本身不接受 +、*、/、括號；取得焦點後轉成文字欄位。
+  if(input.type === 'number') input.type = 'text';
+  input.inputMode = 'decimal';
+});
+document.addEventListener('focusout', e=>{
+  const input = e.target;
+  if(input?.dataset?.mathAmount === 'true') resolveMathAmountInput(input, true);
+}, true);
+document.addEventListener('keydown', e=>{
+  const input = e.target;
+  if(input?.dataset?.mathAmount !== 'true') return;
+  if(!['Enter','Tab','ArrowUp','ArrowDown'].includes(e.key)) return;
+  if(!resolveMathAmountInput(input, true)){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
+}, true);
+
 document.addEventListener('keydown', (e)=>{
   // Help overlay 開著時，只接受 Esc 和 ?
   const helpOpen = document.getElementById('kbHelpOverlay').classList.contains('open');
