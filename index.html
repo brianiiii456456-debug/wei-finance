@@ -2935,6 +2935,18 @@ function isMathAmountInput(input){
   return input instanceof HTMLInputElement &&
     (input.dataset.mathAmount === 'true' || input.step === 'any' || ['dailyFood','dailyTransport'].includes(input.id));
 }
+const MATH_EXPRESSIONS_KEY = 'wei_finance_math_expressions_v1';
+let mathExpressions = (()=>{
+  try{ return JSON.parse(sessionStorage.getItem(MATH_EXPRESSIONS_KEY)||'{}'); }catch(e){ return {}; }
+})();
+function mathExpressionKey(input){
+  // 新增表單在送出後會清空，不保留上一筆算式，避免下次新增時誤帶入。
+  if(input.id && input.id.startsWith('new')) return null;
+  return input.id ? `id:${input.id}` : `change:${input.getAttribute('onchange')||''}`;
+}
+function saveMathExpressions(){
+  try{ sessionStorage.setItem(MATH_EXPRESSIONS_KEY,JSON.stringify(mathExpressions)); }catch(e){}
+}
 function calculateAmountExpression(text){
   const expression = String(text ?? '').replaceAll(',','').trim();
   if(!expression || !/^[0-9+\-*/().\s]+$/.test(expression)) return null;
@@ -2945,7 +2957,8 @@ function calculateAmountExpression(text){
 }
 function resolveMathAmountInput(input, showError=true){
   if(!isMathAmountInput(input)) return true;
-  const result = calculateAmountExpression(input.value);
+  const typed = input.value;
+  const result = calculateAmountExpression(typed);
   if(result === null){
     input.value = input.dataset.mathLastValue ?? '';
     if(showError) showToast('無法計算：請輸入基本四則運算', '⚠', true);
@@ -2953,6 +2966,13 @@ function resolveMathAmountInput(input, showError=true){
   }
   input.value = String(result);
   input.dataset.mathLastValue = input.value;
+  const key = mathExpressionKey(input);
+  if(key){
+    // 只有真正的算式才要記住；直接輸入數字代表使用者要覆蓋舊算式。
+    if(!/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(String(typed).trim())) mathExpressions[key] = typed;
+    else delete mathExpressions[key];
+    saveMathExpressions();
+  }
   return true;
 }
 
@@ -2961,6 +2981,8 @@ document.addEventListener('focusin', e=>{
   if(!isMathAmountInput(input)) return;
   input.dataset.mathAmount = 'true';
   input.dataset.mathLastValue = input.value;
+  const savedExpression = mathExpressions[mathExpressionKey(input)];
+  if(savedExpression) input.value = savedExpression;
   // number 欄位本身不接受 +、*、/、括號；取得焦點後轉成文字欄位。
   if(input.type === 'number') input.type = 'text';
   input.inputMode = 'decimal';
